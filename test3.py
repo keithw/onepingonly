@@ -37,12 +37,18 @@ while True:
     t = struct.unpack("f"*CHUNK, data)
     s = struct.unpack("f"*CHUNK, sines)
     c = struct.unpack("f"*CHUNK, cosines)
-    magnitude = 0.0
+    sine_magnitude = 0.0
+    cosine_magnitude = 0.0
     for i in range(len(t)):
-        val, sine_val, cos_val = t[i], s[i], c[i]
-        magnitude += math.sqrt(abs(val*sine_val + val*cos_val))
-    magnitude /= len(t)
-    print magnitude
+        val, sine_val, cosine_val = t[i], s[i], c[i]
+        sine_amplitude += val*sine_val
+        cosine_amplitude += val*cosine_val
+    sine_amplitude /= len(t)
+    cosine_amplitude /= len(t)
+#    print sine_amplitude, cosine_amplitude
+    mag = math.sqrt(sine_amplitude**2 + cosine_amplitude**2)
+    theta = math.atan2(cosine_amplitude, sine_amplitude) * 180 / math.pi
+    print mag, theta
 
 stream.stop_stream()
 stream.close()
