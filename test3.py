@@ -24,21 +24,22 @@ data = ""
 sines = ""
 cosines = ""
 ctr = 0
-while ctr < CHUNK:
-    sine_value = math.sin( 440.0 * TIME * (2 * math.pi) )
-    sines += struct.pack( 'f', sine_value )
-    cosine_value = math.cos( 440.0 * TIME * (2 * math.pi) )
-    cosines += struct.pack( 'f', cosine_value )
-    TIME += 1.0 / RATE
-    ctr += 1
 
 while True:
+    while ctr < CHUNK:
+        sine_value = math.sin( 440.0 * TIME * (2 * math.pi) )
+        sines += struct.pack( 'f', sine_value )
+        cosine_value = math.cos( 440.0 * TIME * (2 * math.pi) )
+        cosines += struct.pack( 'f', cosine_value )
+        TIME += 1.0 / RATE
+        ctr += 1
+
     data = stream.read(CHUNK)
     t = struct.unpack("f"*CHUNK, data)
     s = struct.unpack("f"*CHUNK, sines)
     c = struct.unpack("f"*CHUNK, cosines)
-    sine_magnitude = 0.0
-    cosine_magnitude = 0.0
+    sine_amplitude = 0.0
+    cosine_amplitude = 0.0
     for i in range(len(t)):
         val, sine_val, cosine_val = t[i], s[i], c[i]
         sine_amplitude += val*sine_val
