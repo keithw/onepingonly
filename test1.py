@@ -27,7 +27,7 @@ while True:
     data = ""
     while len(data) < CHUNK:
         value = .25 * math.sin( 440.0 * TIME * (2 * math.pi) )
-        data += struct.pack( '=f', value )
+        data += struct.pack( 'f', value )
         TIME += 1.0 / RATE
 
     stream.write(data)
