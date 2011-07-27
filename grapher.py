@@ -95,7 +95,10 @@ def capture_audio(*args):
         c += received_signal[ i ] * bitclockH_I[ i ] / CHUNK
         d += received_signal[ i ] * bitclockH_Q[ i ] / CHUNK
 
-    offset = int( (math.pi + cmath.phase( complex(a, b) / complex( c, d ) )) * BIT / (2 * math.pi) )
+    if abs(complex(c, d)) == 0:
+        offset = 0
+    else:
+        offset = int( (math.pi + cmath.phase( complex(a, b) / complex( c, d ) )) * BIT / (2 * math.pi) )
 
     print "offset: %d" % offset
 
