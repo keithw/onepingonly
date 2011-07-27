@@ -7,17 +7,17 @@ import math
 
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
-RATE = 48000
+SAMPLE_RATE = 48000
 FREQ = 1000
 CYCLES_PER_BIT = 4
-BIT = int(RATE*CYCLES_PER_BIT/FREQ)
+BIT = int(SAMPLE_RATE*CYCLES_PER_BIT/FREQ)
 CHUNK = int(16 * BIT)
 
 p = pyaudio.PyAudio()
 
 stream = p.open(format = FORMAT,
                 channels = CHANNELS,
-                rate = RATE,
+                rate = SAMPLE_RATE,
                 input = False,
                 output = True,
                 frames_per_buffer = CHUNK)
@@ -35,7 +35,7 @@ while True:
         while framecount < BIT:
             value = sign * .5 * math.sin( FREQ * TIME * (2 * math.pi) )
             bitdata += struct.pack( 'f', value )
-            TIME += 1.0 / RATE
+            TIME += 1.0 / SAMPLE_RATE
             framecount += 1
         chunkdata += bitdata
         sign = -sign
