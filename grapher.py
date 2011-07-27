@@ -19,10 +19,12 @@ window.add( drawing_area )
 drawing_area.show()
 window.show()
 drawable = drawing_area.window
-context = drawable.new_gc()
+pixmap = gtk.gdk.Pixmap(drawable, WIDTH, HEIGHT, depth=-1)
+context = pixmap.new_gc()
 colormap = drawing_area.get_colormap()
-fg = colormap.alloc_color( "darkblue" )
+fg = colormap.alloc_color( "blue" )
 bg = colormap.alloc_color( "white" )
+axes = colormap.alloc_color( "black" )
 
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
@@ -66,16 +68,25 @@ def capture_audio(*args):
     theta = math.degrees( math.atan2( cosine_amplitude, sine_amplitude ) )
 
     context.foreground = bg
-    drawable.draw_rectangle(context, True, 0, 0, WIDTH, HEIGHT )
+    pixmap.draw_rectangle(context, True, 0, 0, WIDTH, HEIGHT )
 
+    # draw axes
+
+    context.foreground = axes
+    pixmap.draw_line( context, int(WIDTH/2), 0, int(WIDTH/2), HEIGHT )
+    pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
+
+    # draw signal
     context.foreground = fg
-
     y_coor = (HEIGHT/2) + (cosine_amplitude*8) * (HEIGHT/2)
     x_coor = (WIDTH/2) + (sine_amplitude*8) * (WIDTH/2)
 
-    drawable.draw_rectangle(context, True, int(x_coor)-5, int(y_coor)-5, 10, 10 )
+    pixmap.draw_rectangle(context, True, int(x_coor)-5, int(y_coor)-5, 10, 10 )
 
-    print mag, theta
+    # blit to screen
+    drawable.draw_drawable( context, pixmap, 0, 0, 0, 0, -1, -1 )
+
+#    print mag, theta
     return True
 
 gobject.idle_add(capture_audio)
