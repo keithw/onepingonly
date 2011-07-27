@@ -29,10 +29,10 @@ axes = colormap.alloc_color( "black" )
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 48000
-FREQ = 480
-CYCLES_PER_BIT = 5
+FREQ = 1000
+CYCLES_PER_BIT = 4
 BIT = int(RATE*CYCLES_PER_BIT/FREQ)
-CHUNK = 32 * BIT
+CHUNK = int(16 * BIT)
 
 p = pyaudio.PyAudio()
 
@@ -81,8 +81,8 @@ def capture_audio(*args):
 
         # draw bit
         context.foreground = fg
-        y_coor = (HEIGHT/2) + (cosine_amplitude*16) * (HEIGHT/2)
-        x_coor = (WIDTH/2) + (sine_amplitude*16) * (WIDTH/2)
+        y_coor = (HEIGHT/2) + (cosine_amplitude) * (HEIGHT/2)
+        x_coor = (WIDTH/2) + (sine_amplitude) * (WIDTH/2)
 
         pixmap.draw_rectangle(context, True, int(x_coor)-5, int(y_coor)-5, 10, 10 )
 
