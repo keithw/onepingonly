@@ -39,8 +39,8 @@ while True:
         cosine_amplitude += received_signal[ i ] * cosines[ i ] / len( received_signal )
         sine_amplitude += received_signal[ i ] * sines[ i ] / len( received_signal )
 
-    mag = math.sqrt( cosine_amplitude**2 + sine_amplitude**2 )
-    theta = math.atan2( cosine_amplitude, sine_amplitude )
+    mag = math.sqrt( cosine_amplitude**2 + sine_amplitude**2 ) * 1000
+    theta = math.degrees( math.atan2( cosine_amplitude, sine_amplitude ) )
 
     print mag, theta
 

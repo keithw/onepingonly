@@ -8,7 +8,7 @@ import math
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
-
+CHUNK = 1024
 
 p = pyaudio.PyAudio()
 
@@ -17,9 +17,8 @@ stream = p.open(format = FORMAT,
                 rate = RATE,
                 input = False,
                 output = True,
-                frames_per_buffer = 0)
+                frames_per_buffer = CHUNK)
 
-CHUNK = 1024
 TIME = 0 # seconds
 data = ""
 
