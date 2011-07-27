@@ -32,7 +32,7 @@ FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 SAMPLE_RATE = 48000
 FREQ = 1000
-CYCLES_PER_BIT = 4
+CYCLES_PER_BIT = 8
 BIT = int(SAMPLE_RATE*CYCLES_PER_BIT/FREQ)
 CHUNK = int(16 * BIT)
 BIT_RATE = SAMPLE_RATE / BIT
@@ -95,8 +95,10 @@ def capture_audio(*args):
         c += received_signal[ i ] * bitclockH_I[ i ] / CHUNK
         d += received_signal[ i ] * bitclockH_Q[ i ] / CHUNK
 
-    if abs(complex(c, d)) == 0:
+    if abs(complex(a,b)) < .00001 or abs(complex(c,d)) < .00001:
         offset = 0
+        context.foreground=axes
+        pixmap.draw_rectangle(context, True, WIDTH/2-20,HEIGHT/2-20,40,40)
     else:
         offset = int( (math.pi + cmath.phase( complex(a, b) / complex( c, d ) )) * BIT / (2 * math.pi) )
 
@@ -104,25 +106,14 @@ def capture_audio(*args):
 
     # Find amplitude of each bit
     position_in_chunk = 0
-    for bit in range(CHUNK/BIT):
-        sine_amplitude = 0.0
-        cosine_amplitude = 0.0
-        for i in range(BIT):
-            cosine_amplitude += received_signal[ position_in_chunk ] * cosines[ position_in_chunk ] / BIT
-            sine_amplitude +=   received_signal[ position_in_chunk ] * sines[ position_in_chunk ] / BIT
-            position_in_chunk += 1
+    oddbits = []
+    evenbits = []
 
-        mag = math.sqrt( cosine_amplitude**2 + sine_amplitude**2 ) * 1000
-        theta = math.degrees( math.atan2( sine_amplitude, cosine_amplitude ) )
+    odd_total = 0
+    odd_count = 0
 
-        # draw bit
-        context.foreground = fg
-        x_coor = (WIDTH/2) + (cosine_amplitude*5) * (WIDTH/2)
-        y_coor = (HEIGHT/2) + (sine_amplitude*5) * (HEIGHT/2)
-
-        pixmap.draw_rectangle(context, True, int(x_coor)-5, int(y_coor)-5, 10, 10 )
-
-    position_in_chunk = 0
+    even_total = 0
+    even_count = 0
     for bit in range((CHUNK-BIT)/BIT):
         sine_amplitude = 0.0
         cosine_amplitude = 0.0
@@ -135,11 +126,35 @@ def capture_audio(*args):
         theta = math.degrees( math.atan2( sine_amplitude, cosine_amplitude ) )
 
         # draw bit
-        context.foreground = fg2
-        x_coor = (WIDTH/2) + (cosine_amplitude*5) * (WIDTH/2)
-        y_coor = (HEIGHT/2) + (sine_amplitude*5) * (HEIGHT/2)
+        if bit % 2:
+            oddbits.append( complex( cosine_amplitude, sine_amplitude ) )
+            odd_total += complex( cosine_amplitude, sine_amplitude ) 
+            odd_count += 1
+        else:
+            evenbits.append( complex( cosine_amplitude, sine_amplitude ) )
+            even_total += complex( cosine_amplitude, sine_amplitude ) 
+            even_count += 1
 
-        pixmap.draw_rectangle(context, True, int(x_coor)-3, int(y_coor)-3, 6, 6 )
+    odd_mean = odd_total / odd_count
+    even_mean = even_total / even_count
+
+    if abs(odd_mean) < .00001 or abs(even_mean) < .00001:
+        context.foreground=fg
+        pixmap.draw_rectangle(context, True, WIDTH/2-10,HEIGHT/2-10,20,20)
+    else:
+        for x in oddbits:
+            context.foreground = fg
+            coord = x / odd_mean
+            x_coor = (WIDTH/2) - coord.real * (WIDTH/4)
+            y_coor = (HEIGHT/2) - coord.imag * (HEIGHT/4)
+            pixmap.draw_rectangle(context, True, int(x_coor)-5, int(y_coor)-5, 10, 10 )
+
+        for x in evenbits:
+            context.foreground = fg2
+            coord = x / even_mean
+            x_coor = (WIDTH/2) + coord.real * (WIDTH/4)
+            y_coor = (HEIGHT/2) + coord.imag * (HEIGHT/4)
+            pixmap.draw_rectangle(context, True, int(x_coor)-5, int(y_coor)-5, 10, 10 )
 
     # blit to screen
     drawable.draw_drawable( context, pixmap, 0, 0, 0, 0, -1, -1 )
