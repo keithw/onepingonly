@@ -40,7 +40,7 @@ while True:
         chunkdata += bitdata
         sign = -sign
         bitcount += 1
-    print "Wrote %d bits" % bitcount
+#    print "Wrote %d bits" % bitcount
 
     stream.write(chunkdata)
 

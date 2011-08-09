@@ -102,7 +102,7 @@ def capture_audio(*args):
     else:
         offset = int( (math.pi + cmath.phase( complex(a, b) / complex( c, d ) )) * BIT / (2 * math.pi) )
 
-    print "offset: %d" % offset
+#    print "offset: %d" % offset
 
     # Find amplitude of each bit
     position_in_chunk = 0

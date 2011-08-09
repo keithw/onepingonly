@@ -1,0 +1,9 @@
+#!/usr/bin/python
+
+import audio_channel
+
+samples = audio_channel.receive()
+
+for i in samples:
+    print "%f %f" % (i.real, i.imag)
+

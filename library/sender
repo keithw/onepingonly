@@ -1,0 +1,15 @@
+#!/usr/bin/python
+
+import audio_channel
+
+BITS = [ 1, 0.5, 0, -0.5, -0.75, -0.85, -1 ]
+BIT_LENGTH = 300
+
+samples = []
+
+for bit in BITS:
+    for i in range( BIT_LENGTH ):
+        samples.append( bit )
+
+while True:
+    audio_channel.send( samples )
