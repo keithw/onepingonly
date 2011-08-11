@@ -2,8 +2,8 @@
 
 import audio_channel
 
-BITS = [ 1, 0.5, 0, -0.5, -0.75, -0.85, -1 ]
-BIT_LENGTH = 300
+BITS = [ 1, 0.5, 0, -0.5, -1 ]
+BIT_LENGTH = 500
 
 samples = []
 
