@@ -1,9 +1,20 @@
 #!/usr/bin/python
 
-import audio_channel
+from au_defs import *
+import au_recv
+from math import *
 
-samples = audio_channel.receive()
+samples = []
+au_recv.open()
+for i in range(0,16):
+    try:
+        samp = au_recv.receive()
+        samples.extend(samp)
+    except:
+        pass
 
-for i in samples:
-    print "%f %f" % (i.real, i.imag)
-
+n = 0
+for s in samples:
+#    print "%d %f" % (n, sqrt(s.real**2 + s.imag**2))
+    print "%d %f" % (n, s.real)
+    n = n+1

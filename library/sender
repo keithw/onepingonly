@@ -1,15 +1,24 @@
 #!/usr/bin/python
 
-import audio_channel
+from au_defs import *
+import au_send
 
-BITS = [ 1, 0.5, 0, -0.5, -1 ]
-BIT_LENGTH = 500
+VOLTAGES = [ 0.5, 1]
+#VOLTAGES = [ 0.5, 1, 0.5, 0, -0.5, -1 ]
+SAMPLES_PER_VOLTAGE = 1200
+
+# Derived quantities
+SAMPLES_PER_CHUNK = int( SAMPLES_PER_SECOND * SECONDS_PER_CHUNK )
+
+print "Samples per second: %d" % SAMPLES_PER_SECOND
+print "Samples per voltage: %d" % SAMPLES_PER_VOLTAGE
+print "Samples per chunk: %d" % SAMPLES_PER_CHUNK
 
 samples = []
 
-for bit in BITS:
-    for i in range( BIT_LENGTH ):
-        samples.append( bit )
+for v in VOLTAGES:
+    for i in range( SAMPLES_PER_VOLTAGE ):
+        samples.append( v )
 
 while True:
-    audio_channel.send( samples )
+    au_send.send( samples )

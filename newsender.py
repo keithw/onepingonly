@@ -33,7 +33,7 @@ while True:
         bitdata = ""
         framecount = 0
         while framecount < BIT:
-            value = sign * .5 * math.cos( FREQ * TIME * (2 * math.pi) )
+            value = sign * .01 * math.cos( FREQ * TIME * (2 * math.pi) )
             bitdata += struct.pack( 'f', value )
             TIME += 1.0 / SAMPLE_RATE
             framecount += 1
