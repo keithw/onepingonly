@@ -1,0 +1,63 @@
+#!/usr/bin/python
+
+import au_receive
+import pygtk
+import gtk
+import gobject
+
+# Configuration
+WIDTH=512
+HEIGHT=512
+window_size = 8192
+slice_size = 8192
+
+# Set up plot
+window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+drawing_area = gtk.DrawingArea()
+drawing_area.set_size_request(WIDTH, HEIGHT)
+window.add( drawing_area )
+drawing_area.show()
+window.show()
+drawable = drawing_area.window
+pixmap = gtk.gdk.Pixmap(drawable, WIDTH, HEIGHT, depth=-1)
+context = pixmap.new_gc()
+colormap = drawing_area.get_colormap()
+fg = colormap.alloc_color( "red" )
+bg = colormap.alloc_color( "white" )
+axes = colormap.alloc_color( "black" )
+
+sample_num = 0
+
+# Clear screen and draw axes
+context.foreground = bg
+pixmap.draw_rectangle(context, True, 0, 0, WIDTH, HEIGHT )
+context.foreground = axes
+pixmap.draw_line( context, int(WIDTH/2), 0, int(WIDTH/2), HEIGHT )
+pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
+context.foreground = fg
+
+while True:
+    # Receive audio
+    samples = au_receive.receive( slice_size )
+
+    points = []
+
+    # Draw samples
+    for s in samples:
+        x_coor = sample_num * WIDTH / window_size
+        y_coor = HEIGHT / 2 + (HEIGHT/8) * s
+        points.append( (int(x_coor), int(y_coor)) )
+        sample_num += 1
+    
+    pixmap.draw_points(context, points )
+
+    drawable.draw_drawable( context, pixmap, 0, 0, 0, 0, -1, -1 )
+
+    if sample_num > window_size:
+        sample_num = 0
+        context.foreground = bg
+        pixmap.draw_rectangle(context, True, 0, 0, WIDTH, HEIGHT )
+        context.foreground = axes
+        pixmap.draw_line( context, int(WIDTH/2), 0, int(WIDTH/2), HEIGHT )
+        pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
+        context.foreground = fg
