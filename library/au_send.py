@@ -20,11 +20,6 @@ TIME = 0 # seconds
 # Send one chunk of I samples, modulated onto the carrier frequency
 def send( samples ):
     global TIME
-    assert( len(samples) <= SAMPLES_PER_OUTPUT_PACKET )
-
-    # Fill out samples to length of chunk
-    while len(samples) < SAMPLES_PER_OUTPUT_PACKET:
-        samples.append( 0 )
 
     sample_count = 0
     chunk_data = [ "" ]
@@ -37,7 +32,7 @@ def send( samples ):
         TIME += 1.0 / SAMPLES_PER_SECOND
         sample_count += 1
 
-        if sample_count == SAMPLES_PER_OUTPUT_PACKET:
+        if sample_count == SAMPLES_PER_CHUNK:
             chunk_number += 1
             chunk_data.append( "" )
             sample_count = 0

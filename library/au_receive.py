@@ -17,11 +17,11 @@ stream = p.open(format = FORMAT,
 
 TIME = 0 # seconds
 
-def receive():
+def receive( num_samples ):
     global TIME
     sample_count = 0
     samples = []
-    while sample_count < SAMPLES_PER_INPUT_PACKET:
+    while sample_count < num_samples:
         samples.extend( struct.unpack( 'f' * SAMPLES_PER_CHUNK,
                                        stream.read( SAMPLES_PER_CHUNK ) ) )
         sample_count += SAMPLES_PER_CHUNK
