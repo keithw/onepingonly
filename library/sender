@@ -1,15 +1,15 @@
 #!/usr/bin/python
 
-import audio_channel
+import au_send
 
-BITS = [ 1, 0.5, 0, -0.5, -1 ]
-BIT_LENGTH = 500
+VOLTAGES = [ 1, 0.5, 0, -0.5, -1 ]
+VOLTAGE_LENGTH = 500
 
 samples = []
 
-for bit in BITS:
-    for i in range( BIT_LENGTH ):
-        samples.append( bit )
+for voltage in VOLTAGES:
+    for i in range( VOLTAGE_LENGTH ):
+        samples.append( voltage )
 
 while True:
-    audio_channel.send( samples )
+    au_send.send( samples )
