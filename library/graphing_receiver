@@ -43,7 +43,7 @@ while True:
         y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
         points.append( (int(x_coor), int(y_coor)) )
         sample_num += 1
-        right_edge = x_coor + 1
+        right_edge = x_coor + 5
     
     # Clear screen and draw guides
     context.foreground = bg
