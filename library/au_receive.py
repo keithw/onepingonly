@@ -28,9 +28,12 @@ for i in range( SAMPLES_PER_SECOND ):
 
 total_sample_count = 0
 
+average_amplitude = 0
+
 def receive( num_samples ):
     global TIME
     global total_sample_count
+    global average_amplitude
 
     sample_count = 0
     samples = []
@@ -55,7 +58,7 @@ def receive( num_samples ):
 
     # calculate average amplitude (DC amplitude)
     # we will use this for auto-gain control
-    average_amplitude = sum( demodulated_samples ) / float(sample_count)
+    average_amplitude = 0.99 * average_amplitude + 0.01 * sum( demodulated_samples ) / float(sample_count)
 
     # Shift samples in time back to original phase and amplitude (using carrier)
     shifted_samples = [ y.real for y in [ .5 * (x / average_amplitude - 1) for x in demodulated_samples ] ]

@@ -8,8 +8,8 @@ import gobject
 # Configuration
 WIDTH=512
 HEIGHT=512
-window_size = 8192
-slice_size = 8192
+window_size = 16384
+slice_size = 64
 
 # Set up plot
 window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -25,16 +25,10 @@ colormap = drawing_area.get_colormap()
 fg = colormap.alloc_color( "red" )
 bg = colormap.alloc_color( "white" )
 axes = colormap.alloc_color( "black" )
+guides = colormap.alloc_color( "blue" )
+cursor = colormap.alloc_color( "green" )
 
 sample_num = 0
-
-# Clear screen and draw axes
-context.foreground = bg
-pixmap.draw_rectangle(context, True, 0, 0, WIDTH, HEIGHT )
-context.foreground = axes
-pixmap.draw_line( context, int(WIDTH/2), 0, int(WIDTH/2), HEIGHT )
-pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
-context.foreground = fg
 
 while True:
     # Receive audio
@@ -43,21 +37,30 @@ while True:
     points = []
 
     # Draw samples
+    left_edge = sample_num * WIDTH / window_size
     for s in samples:
         x_coor = sample_num * WIDTH / window_size
-        y_coor = HEIGHT / 2 + (HEIGHT/8) * s
+        y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
         points.append( (int(x_coor), int(y_coor)) )
         sample_num += 1
+        right_edge = x_coor + 1
     
-    pixmap.draw_points(context, points )
+    # Clear screen and draw guides
+    context.foreground = bg
+    pixmap.draw_rectangle( context, True, left_edge, 0, right_edge - left_edge, HEIGHT )
+    context.foreground = axes
+    pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
+    context.foreground = guides
+    pixmap.draw_line( context, 0, int(HEIGHT/4), WIDTH, int(HEIGHT/4) )
+    pixmap.draw_line( context, 0, int(3*HEIGHT/4), WIDTH, int(3*HEIGHT/4) )
+    context.foreground = cursor
+    pixmap.draw_line( context, right_edge, 0, right_edge, HEIGHT )
+
+    # Draw points
+    context.foreground = fg
+    pixmap.draw_points(context, points)
 
     drawable.draw_drawable( context, pixmap, 0, 0, 0, 0, -1, -1 )
 
     if sample_num > window_size:
         sample_num = 0
-        context.foreground = bg
-        pixmap.draw_rectangle(context, True, 0, 0, WIDTH, HEIGHT )
-        context.foreground = axes
-        pixmap.draw_line( context, int(WIDTH/2), 0, int(WIDTH/2), HEIGHT )
-        pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
-        context.foreground = fg
