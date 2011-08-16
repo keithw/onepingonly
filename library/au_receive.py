@@ -15,13 +15,19 @@ stream = p.open(format = FORMAT,
                 output = False,
                 frames_per_buffer = SAMPLES_PER_CHUNK)
 
+TIME = 0 # seconds
+
 def receive():
-    samples = struct.unpack( 'f' * SAMPLES_PER_CHUNK,
-                             stream.read( SAMPLES_PER_CHUNK ) )
+    global TIME
+    sample_count = 0
+    samples = []
+    while sample_count < SAMPLES_PER_INPUT_PACKET:
+        samples.extend( struct.unpack( 'f' * SAMPLES_PER_CHUNK,
+                                       stream.read( SAMPLES_PER_CHUNK ) ) )
+        sample_count += SAMPLES_PER_CHUNK
 
     # Demodulate carrier
     demodulated_samples = []
-    TIME = 0 # seconds
     average_amplitude = complex( 0, 0 )
 
     # Shift the modulated waveform back down to baseband

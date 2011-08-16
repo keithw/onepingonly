@@ -15,24 +15,32 @@ stream = p.open(format = FORMAT,
                 output = True,
                 frames_per_buffer = SAMPLES_PER_CHUNK)
 
+TIME = 0 # seconds
+
 # Send one chunk of I samples, modulated onto the carrier frequency
 def send( samples ):
-    assert( len(samples) <= SAMPLES_PER_CHUNK )
-
-    sample_count = 0
-    chunk_data = ""
-    TIME = 0 # seconds
+    global TIME
+    assert( len(samples) <= SAMPLES_PER_OUTPUT_PACKET )
 
     # Fill out samples to length of chunk
-    while len(samples) < SAMPLES_PER_CHUNK:
+    while len(samples) < SAMPLES_PER_OUTPUT_PACKET:
         samples.append( 0 )
 
+    sample_count = 0
+    chunk_data = [ "" ]
+    chunk_number = 0
+
     # Write payload
+    
     for s in samples:
-        chunk_data += struct.pack( 'f', ((s * AMPLITUDE) + DC) * math.cos( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi ) )
+        chunk_data[ chunk_number ] += struct.pack( 'f', ((s * AMPLITUDE) + DC) * math.cos( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi ) )
         TIME += 1.0 / SAMPLES_PER_SECOND
         sample_count += 1
 
-    # Send modulated samples
-    stream.write( chunk_data )
+        if sample_count == SAMPLES_PER_OUTPUT_PACKET:
+            chunk_number += 1
+            chunk_data.append( "" )
+            sample_count = 0
 
+    for chunk in chunk_data:
+        stream.write( chunk )
