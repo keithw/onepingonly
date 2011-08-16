@@ -6,6 +6,8 @@ import StringIO
 
 from au_defs import *
 
+SAMPLES_PER_CHUNK = 32
+
 # Open audio channel (input and output)
 p = pyaudio.PyAudio()
 stream = p.open(format = FORMAT,
@@ -28,12 +30,15 @@ for i in range( SAMPLES_PER_SECOND ):
 
 total_sample_count = 0
 
-average_amplitude = 0
+num_amplitudes = 512
+average_amplitudes = [ 1 ] * num_amplitudes
+amplitude_sum = sum( average_amplitudes )
 
 def receive( num_samples ):
     global TIME
     global total_sample_count
-    global average_amplitude
+    global average_amplitudes
+    global amplitude_sum
 
     sample_count = 0
     samples = []
@@ -58,10 +63,14 @@ def receive( num_samples ):
 
     # calculate average amplitude (DC amplitude)
     # we will use this for auto-gain control
-    average_amplitude = 0.997 * average_amplitude + 0.003 * sum( demodulated_samples ) / float(sample_count)
+    average_amplitude = sum( demodulated_samples ) / float(sample_count)
+    average_amplitudes.pop( 0 )
+    average_amplitudes.append( average_amplitude )
+    amplitude_sum += average_amplitude - average_amplitudes[ 0 ]
+    amplitude_overall_average = amplitude_sum / num_amplitudes
 
     # Shift samples in time back to original phase and amplitude (using carrier)
-    shifted_samples = [ y.real for y in [ .5 * (x / average_amplitude - 1) for x in demodulated_samples ] ]
+    shifted_samples = [ y.real for y in [ .5 * (x / amplitude_overall_average - 1) for x in demodulated_samples ] ]
 
     # Low-pass filter
     window = SAMPLES_PER_SECOND // CARRIER_CYCLES_PER_SECOND

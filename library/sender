@@ -3,7 +3,7 @@
 import au_send
 
 VOLTAGES = [ 1, 0, -1, 0 ]
-VOLTAGE_LENGTH = 2048
+VOLTAGE_LENGTH = 1024
 
 samples = []
 

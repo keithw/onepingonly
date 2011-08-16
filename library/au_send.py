@@ -6,6 +6,8 @@ import StringIO
 
 from au_defs import *
 
+SAMPLES_PER_CHUNK = 1024
+
 # Open audio channel (input and output)
 p = pyaudio.PyAudio()
 stream = p.open(format = FORMAT,

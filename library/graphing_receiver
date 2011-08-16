@@ -9,7 +9,7 @@ import gobject
 WIDTH=512
 HEIGHT=512
 window_size = 16384
-slice_size = 64
+slice_size = 32
 
 # Set up plot
 window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -43,7 +43,7 @@ while True:
         y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
         points.append( (int(x_coor), int(y_coor)) )
         sample_num += 1
-        right_edge = x_coor + 5
+        right_edge = x_coor + 2
     
     # Clear screen and draw guides
     context.foreground = bg
