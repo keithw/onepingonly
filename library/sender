@@ -1,9 +1,21 @@
 #!/usr/bin/python
 
-import au_send
+from au_defs import *
 
-VOLTAGES = [ 1, 0, -1, 0 ]
-VOLTAGE_LENGTH = 1024
+import au_send
+import pyaudio
+
+# Open soundcard
+p = pyaudio.PyAudio()
+soundcard_out = p.open(format = FORMAT,
+                       channels = CHANNELS,
+                       rate = SAMPLES_PER_SECOND,
+                       input = False,
+                       output = True,
+                       frames_per_buffer = 1024 )
+
+VOLTAGES = [ 1, 0.5, 0, -0.5, -1, 0, 0, 0 ]
+VOLTAGE_LENGTH = 1
 
 samples = []
 
@@ -11,5 +23,7 @@ for voltage in VOLTAGES:
     for i in range( VOLTAGE_LENGTH ):
         samples.append( voltage )
 
+au_send.send( [0] * SAMPLES_PER_SECOND, soundcard_out, 1024 )
+
 while True:
-    au_send.send( samples )
+    au_send.send( au_send.expand( samples, 8 ), soundcard_out, 1024 )

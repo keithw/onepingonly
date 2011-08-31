@@ -1,27 +1,16 @@
 #!/usr/bin/python
 
-from au_defs import *
-
+import au_send
 import au_receive
 import pygtk
 import gtk
 import gobject
-import pyaudio
+import struct
 
 # Configuration
 WIDTH=512
 HEIGHT=512
 window_size = 16384
-slice_size = 64
-
-# Open soundcard
-p = pyaudio.PyAudio()
-soundcard_in = p.open(format = FORMAT,
-                      channels = CHANNELS,
-                      rate = SAMPLES_PER_SECOND,
-                      input = True,
-                      output = False,
-                      frames_per_buffer = slice_size )
 
 # Set up plot
 window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -42,9 +31,24 @@ cursor = colormap.alloc_color( "green" )
 
 sample_num = 0
 
+VOLTAGES = [ 1, 0.5, 0, -0.5, -1 ]
+VOLTAGE_LENGTH = 256
+
+FACTOR = 10
+
+sendsamples = []
+
+for voltage in VOLTAGES:
+    for i in range( VOLTAGE_LENGTH ):
+        sendsamples.append( voltage )
+
 while True:
     # Receive audio
-    samples = au_receive.receive( slice_size, soundcard_in, slice_size )
+    ssamples = ""
+    for chunk in au_send.modulate( au_send.expand( sendsamples, FACTOR ), 256 ):
+        ssamples += chunk
+    samples = au_receive.decimate( au_receive.demodulate( struct.unpack( 'f' * len(sendsamples) * FACTOR, ssamples ) ),
+                                   FACTOR )
 
     points = []
 
