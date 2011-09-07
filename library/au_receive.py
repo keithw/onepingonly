@@ -3,6 +3,8 @@ import sys
 import struct
 import math
 import StringIO
+import numpy
+import scipy.signal
 
 from au_defs import *
 
@@ -20,30 +22,32 @@ for i in range( cachelen ):
 
 total_sample_count = 0
 
-num_amplitudes = 8192
+num_amplitudes = 32768
 amplitudes = [ 1 ]
 samples_in_amplitude_history = 0
 amplitude_sum = sum( amplitudes )
 
+nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
+passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
+filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.975, passband * 1.025, 1, 60 )
+filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
+
 def receive( num_samples, stream, samples_per_chunk ):
     return demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
-
-def decimate( samples, factor ):
-    out = []
-    while len(samples) > 0:
-        this_level = samples[0:factor]
-        del samples[0:factor]
-        assert( len(this_level) == factor or len(samples) == 0 )
-        out.append( sum( this_level ) / factor )
-    return out
 
 def raw_receive( num_samples, stream, samples_per_chunk ):
     sample_count = 0
     samples = []
     while sample_count < num_samples:
-        samples.extend( struct.unpack( 'f' * samples_per_chunk,
-                                       stream.read( samples_per_chunk ) ) )
-        sample_count += samples_per_chunk
+        try:
+            samples.extend( struct.unpack( 'f' * samples_per_chunk,
+                                           stream.read( samples_per_chunk ) ) )
+            sample_count += samples_per_chunk
+        except IOError:
+            sys.stderr.write( "IOError\n" )
+            pass
+
+    assert( sample_count == num_samples )
     return samples
 
 def demodulate( samples ):
@@ -52,6 +56,8 @@ def demodulate( samples ):
     global amplitudes
     global amplitude_sum
     global samples_in_amplitude_history
+
+    global filter_state
 
     # Demodulate carrier
     sample_count = len( samples )
@@ -72,13 +78,13 @@ def demodulate( samples ):
         samples_in_amplitude_history = sample_count # we assume same value each call
 
     # calculate average amplitude (DC amplitude)
-    # we will use this for auto-gain control
+    # we will use this for auto gain control
     total_amplitude = sum( demodulated_samples )
     amplitudes.append( total_amplitude )
     amplitude_sum += total_amplitude
     samples_in_amplitude_history += sample_count
 
-    if samples_in_amplitude_history >= num_amplitudes:
+    if samples_in_amplitude_history > num_amplitudes:
         amplitude_sum -= amplitudes[ 0 ]
         amplitudes.pop( 0 )
         samples_in_amplitude_history -= sample_count
@@ -89,17 +95,15 @@ def demodulate( samples ):
     shifted_samples = [ y.real for y in [ (DC/AMPLITUDE) * (x / amplitude_overall_average - 1) for x in demodulated_samples ] ]
 
     # Low-pass filter
-    window = SAMPLES_PER_SECOND // CARRIER_CYCLES_PER_SECOND
-    last_samples = [0] * window
-    filtered_samples = [0] * sample_count
-    running_sum = sum( last_samples )
-    i = 0
-    for s in shifted_samples:
-        last_samples.append( s )
-        running_sum += s - last_samples[ 0 ]
-        last_samples.pop( 0 )
-        filtered_samples[ i ] = running_sum / window
-        i += 1
+    filtered_samples, filter_state = scipy.signal.lfilter( filter_numer, filter_denom, shifted_samples, zi=filter_state )
 
+    for i in range(len(filtered_samples)):
+        if filtered_samples[i] < -5:
+            filtered_samples[i] = -5
+        if filtered_samples[i] > 5:
+            filtered_samples[i] = 5
+        if math.isnan( filtered_samples[i] ):
+            filtered_samples[i] = 0
+    
     return filtered_samples
     
