@@ -3,6 +3,7 @@ import sys
 import struct
 import math
 import StringIO
+import scipy.signal
 
 from au_defs import *
 
@@ -17,6 +18,12 @@ for i in range( cachelen ):
     TIME += 1.0 / SAMPLES_PER_SECOND
 
 total_sample_count = 0
+
+nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
+passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
+
+filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.75 * 0.975, passband * 0.75 * 1.025, 1, 60 )
+filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
 
 def send( samples, stream, samples_per_chunk ):
     return raw_send( modulate( samples, samples_per_chunk ), stream )
@@ -36,12 +43,15 @@ def raw_send( chunks, stream ):
 def modulate( samples, samples_per_chunk ):
     global TIME
     global total_sample_count
+    global filter_state
 
     sample_count = 0
     chunk_data = [ "" ]
     chunk_number = 0
 
     # Write payload
+
+    samples, filter_state = scipy.signal.lfilter( filter_numer, filter_denom, samples, zi=filter_state )
     
     for s in samples:
         chunk_data[ chunk_number ] += struct.pack( 'f', ((s * AMPLITUDE) + DC) * COS_CACHE[ total_sample_count % cachelen ] )
