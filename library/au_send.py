@@ -22,7 +22,7 @@ total_sample_count = 0
 nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
 passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.75 * 0.975, passband * 0.75 * 1.025, 1, 60 )
+filter_numer, filter_denom = scipy.signal.iirdesign( passband, passband * 1.1, 0.1, 60 )
 filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
 
 def send( samples, stream, samples_per_chunk ):

@@ -31,12 +31,12 @@ nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
 
 passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
-tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.8 * 1.025, passband * 1.2 * 0.975 ],
-                                                   [ passband * 0.8 * 0.975, passband * 1.2 * 1.025 ],
+tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.5 * 1.025, passband * 1.5 * 0.975 ],
+                                                   [ passband * 0.5 * 0.975, passband * 1.5 * 1.025 ],
                                                    1, 60 )
 tuner_state = scipy.signal.lfiltic( tuner_numer, tuner_denom, [] )
 
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.975, passband * 1.025, 1, 60 )
+filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.9, passband, 1, 60 )
 filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
 
 def receive( num_samples, stream, samples_per_chunk ):

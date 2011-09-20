@@ -12,7 +12,7 @@ soundcard_out = p.open(format = FORMAT,
                        rate = SAMPLES_PER_SECOND,
                        input = False,
                        output = True,
-                       frames_per_buffer = 1024 )
+                       frames_per_buffer = 4096 )
 
 VOLTAGES = [ 1, 0.5, 0, -0.5, -1, 0, 0, 0 ]
 VOLTAGE_LENGTH = 1024
@@ -24,4 +24,4 @@ for voltage in VOLTAGES:
         samples.append( voltage )
 
 while True:
-    au_send.send( samples, soundcard_out, 1024 )
+    au_send.send( samples, soundcard_out, 4096 )
