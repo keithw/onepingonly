@@ -22,7 +22,7 @@ for i in range( cachelen ):
 
 total_sample_count = 0
 
-num_amplitudes = 8192
+num_amplitudes = 2048
 amplitudes = [ 1 ]
 samples_in_amplitude_history = 0
 amplitude_sum = sum( amplitudes )
@@ -68,6 +68,15 @@ def raw_receive( num_samples, stream, samples_per_chunk ):
     assert( sample_count == num_samples )
     return samples
 
+def clear_amplitude_history():
+    global amplitudes
+    global amplitude_sum
+    global samples_in_amplitude_history
+
+    amplitues = []
+    amplitude_sum = 0
+    samples_in_amplitude_history = 0
+
 def demodulate( samples ):
     global TIME
     global total_sample_count
@@ -96,22 +105,27 @@ def demodulate( samples ):
         total_sample_count += 1
         i += 1
 
-    if samples_in_amplitude_history == 0: # initializing
-        samples_in_amplitude_history = sample_count # we assume same value each call
-
     # calculate average amplitude (DC amplitude)
     # we will use this for auto gain control
+    initializing = False
+    if samples_in_amplitude_history == 0: # initializing
+        initializing = True
+        samples_in_amplitude_history = sample_count # we assume same value each call
+
     total_amplitude = sum( demodulated_samples )
     amplitudes.append( total_amplitude )
     amplitude_sum += total_amplitude
     samples_in_amplitude_history += sample_count
 
-    if samples_in_amplitude_history > num_amplitudes:
+    while samples_in_amplitude_history > num_amplitudes:
         amplitude_sum -= amplitudes[ 0 ]
         amplitudes.pop( 0 )
         samples_in_amplitude_history -= sample_count
 
-    amplitude_overall_average = amplitude_sum / samples_in_amplitude_history
+    if initializing:
+        amplitude_overall_average = total_amplitude / sample_count
+    else:
+        amplitude_overall_average = amplitude_sum / samples_in_amplitude_history
 
     # Shift samples in time back to original phase and amplitude (using carrier)
     shifted_samples = [ y.real for y in [ (DC/AMPLITUDE) * (x / amplitude_overall_average - 1) for x in demodulated_samples ] ]
