@@ -1,9 +1,0 @@
-#!/usr/bin/python
-
-import au_receive
-
-samples = au_receive.receive( 16384 )
-
-for i in samples:
-    print "%f %f" % (i.real, i.imag)
-
