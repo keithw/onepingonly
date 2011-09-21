@@ -63,6 +63,7 @@ class channel:
             print "Could not find silence before preamble"
             return []
 
+        print 'found carrier'
         # search for preamble bits
         preamble_bitsearch = 1
         preamble_bitcount = 0
@@ -85,6 +86,7 @@ class channel:
             print "Could not find 16 preamble bits, found only %d" % preamble_bitcount
             return []
 
+        print 'found preamble'
         # search for silence
         silent_count = 0
         while sample_id < len(raw_received):
@@ -101,12 +103,13 @@ class channel:
             print "Could not find silence after preamble"
             return []
 
+        print 'found second carrier'
         # now that we've identified the payload, use one AGC setting for whole thing
         clear_amplitude_history()
         version2 = decimate( demodulate( samples_all[ sample_id * DECIMATION_FACTOR : ] ),
                              DECIMATION_FACTOR )
 
-        return version2
+        return version2[:len(samples)]
 
     def __init__( self ):
         self.id = "Audio"
