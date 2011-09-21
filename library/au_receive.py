@@ -22,7 +22,7 @@ for i in range( cachelen ):
 
 total_sample_count = 0
 
-num_amplitudes = 32768
+num_amplitudes = 8192
 amplitudes = [ 1 ]
 samples_in_amplitude_history = 0
 amplitude_sum = sum( amplitudes )
@@ -40,7 +40,18 @@ filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.9, passband, 1
 filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
 
 def receive( num_samples, stream, samples_per_chunk ):
-    return demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
+    factor = int( 1.0 / passband )
+    return decimate( demodulate( raw_receive( num_samples * factor, stream, samples_per_chunk ) ),
+                     factor )
+
+def decimate( samples, factor ):
+    out = []
+    i = 0
+    for s in samples:
+        if i % factor == 0:
+            out.append( s * factor )
+        i += 1
+    return out
 
 def raw_receive( num_samples, stream, samples_per_chunk ):
     sample_count = 0
@@ -109,10 +120,10 @@ def demodulate( samples ):
     filtered_samples, filter_state = scipy.signal.lfilter( filter_numer, filter_denom, shifted_samples, zi=filter_state )
 
     for i in range(len(filtered_samples)):
-        if filtered_samples[i] < -5:
-            filtered_samples[i] = -5
-        if filtered_samples[i] > 5:
-            filtered_samples[i] = 5
+        if filtered_samples[i] < -1.95:
+            filtered_samples[i] = -1.95
+        if filtered_samples[i] > 1.95:
+            filtered_samples[i] = 1.95
         if math.isnan( filtered_samples[i] ):
             filtered_samples[i] = 0
     

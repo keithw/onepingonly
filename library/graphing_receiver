@@ -11,8 +11,8 @@ import pyaudio
 # Configuration
 WIDTH=512
 HEIGHT=512
-window_size = 16384
-slice_size = 512
+window_size = 4096
+slice_size = 256
 
 # Open soundcard
 p = pyaudio.PyAudio()
@@ -56,6 +56,9 @@ while True:
         x_coor = sample_num * WIDTH / window_size
         y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
         points.append( (int(x_coor), int(y_coor)) )
+        points.append( (int(x_coor)+1, int(y_coor)) )
+        points.append( (int(x_coor), int(y_coor)+1) )
+        points.append( (int(x_coor)+1, int(y_coor)+1) )
         sample_num += 1
         right_edge = x_coor + 2
     

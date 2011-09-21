@@ -22,17 +22,24 @@ total_sample_count = 0
 nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
 passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
+print "Expansion: %f" % (1.0 / passband)
+
 filter_numer, filter_denom = scipy.signal.iirdesign( passband, passband * 1.1, 0.1, 60 )
 filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
 
 def send( samples, stream, samples_per_chunk ):
-    return raw_send( modulate( samples, samples_per_chunk ), stream )
+    return raw_send( modulate( expand( samples, int( 1.0 / passband ) ),
+                               samples_per_chunk ),
+                     stream )
 
 def expand( samples, factor ):
     out = []
     for s in samples:
         for i in range( factor ):
-            out.append( s )
+            if i == 0:
+                out.append( s )
+            else:
+                out.append( 0 )
     return out
 
 def raw_send( chunks, stream ):
