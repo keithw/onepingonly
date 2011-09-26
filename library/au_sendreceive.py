@@ -69,7 +69,8 @@ class channel:
         preamble_bitcount = 0
         thisbit_count = 0
         while sample_id < len(raw_received):
-            if raw_received[ sample_id ] * preamble_bitsearch >= 0.3:
+#            if raw_received[ sample_id ] * preamble_bitsearch >= 0.3:
+            if raw_received[ sample_id ] * preamble_bitsearch >= 0.02:
                 thisbit_count += 1
             else:
                 thisbit_count = 0
