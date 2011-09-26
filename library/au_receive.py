@@ -33,10 +33,10 @@ passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
 tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.5 * 1.025, passband * 1.5 * 0.975 ],
                                                    [ passband * 0.5 * 0.975, passband * 1.5 * 1.025 ],
-                                                   1, 60 )
+                                                   1, 40 )
 tuner_state = scipy.signal.lfiltic( tuner_numer, tuner_denom, [] )
 
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.9, passband, 1, 60 )
+filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.9, passband, 1, 40 )
 filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
 
 def receive( num_samples, stream, samples_per_chunk ):
@@ -126,6 +126,9 @@ def demodulate( samples ):
         amplitude_overall_average = total_amplitude / sample_count
     else:
         amplitude_overall_average = amplitude_sum / samples_in_amplitude_history
+
+    if amplitude_overall_average == 0:
+        amplitude_overall_average = 1
 
     # Shift samples in time back to original phase and amplitude (using carrier)
     shifted_samples = [ y.real for y in [ (DC/AMPLITUDE) * (x / amplitude_overall_average - 1) for x in demodulated_samples ] ]
