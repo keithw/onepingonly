@@ -24,7 +24,7 @@ class channel:
 
         packet.extend( samples )
 
-        packet.extend( [0] * 4096 )
+        packet.extend( [0] * 16384 )
 
         # prepare modulated output
         samples_out = modulate( expand( packet, DECIMATION_FACTOR), SAMPLES_PER_CHUNK )
@@ -109,6 +109,11 @@ class channel:
         clear_amplitude_history()
         version2 = decimate( demodulate( samples_all[ sample_id * DECIMATION_FACTOR : ] ),
                              DECIMATION_FACTOR )
+
+        print "got %d samples after preamble" % len(version2)
+        if len(version2) < len(samples):
+            print "warning: short packet. May need to lengthen trailer!"
+        assert( len(version2) > len(samples) )
 
         return version2[:len(samples)]
 
