@@ -9,10 +9,10 @@ import gobject
 import pyaudio
 
 # Configuration
-WIDTH=512
+WIDTH=1024
 HEIGHT=512
 window_size = 4096
-slice_size = 256
+slice_size = 16
 
 # Open soundcard
 p = pyaudio.PyAudio()
