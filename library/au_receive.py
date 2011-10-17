@@ -45,7 +45,7 @@ def raw_receive( num_samples, stream, samples_per_chunk ):
     samples = []
     while sample_count < num_samples:
         try:
-            samples.extend( struct.unpack( 'f' * samples_per_chunk,
+            samples.extend( struct.unpack( 'f' * samples_per_chunk * CHANNELS,
                                            stream.read( samples_per_chunk ) ) )
             sample_count += samples_per_chunk
         except IOError:
@@ -53,9 +53,23 @@ def raw_receive( num_samples, stream, samples_per_chunk ):
             pass
 
     assert( sample_count == num_samples )
-    return numpy.array(samples)
+    samples = numpy.array(samples)
+    return (samples[::2], samples[1::2])
 
-class Demodulator:
+class TwoChannelReceiver:
+    def __init__( self ):
+        self.leftrec = Receiver()
+        self.rightrec = Receiver()
+
+    def receive( self, num_samples, stream, samples_per_chunk ):
+        factor = int( 1.0 / passband )
+
+        leftsamp, rightsamp = raw_receive( num_samples * factor, stream, samples_per_chunk )
+        leftsamp = self.leftrec.demodulate( leftsamp )[::factor]
+        rightsamp = self.rightrec.demodulate( rightsamp )[::factor]
+        return (leftsamp, rightsamp)
+
+class Receiver:
     def receive( self, num_samples, stream, samples_per_chunk ):
         factor = int( 1.0 / passband )
         return self.demodulate( raw_receive( num_samples * factor, stream, samples_per_chunk ) )[::factor]

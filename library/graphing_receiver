@@ -34,52 +34,60 @@ drawable = drawing_area.window
 pixmap = gtk.gdk.Pixmap(drawable, WIDTH, HEIGHT, depth=-1)
 context = pixmap.new_gc()
 colormap = drawing_area.get_colormap()
-fg = colormap.alloc_color( "red" )
+fgleft = colormap.alloc_color( "red" )
+fgright = colormap.alloc_color( "blue" )
 bg = colormap.alloc_color( "white" )
 axes = colormap.alloc_color( "black" )
-guides = colormap.alloc_color( "blue" )
+#guides = colormap.alloc_color( "blue" )
 cursor = colormap.alloc_color( "green" )
 
 sample_num = 0
 
-demodulator = au_receive.Demodulator()
+receiver = au_receive.TwoChannelReceiver()
+
+def makepoints( init_num, samples ):
+    points = []
+    for s in samples:
+        x_coor = init_num * WIDTH / window_size
+        y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
+        points.append( (int(x_coor), int(y_coor)) )
+#        points.append( (int(x_coor)+1, int(y_coor)) )
+#        points.append( (int(x_coor), int(y_coor)+1) )
+#        points.append( (int(x_coor)+1, int(y_coor)+1) )
+        init_num += 1
+    return points
 
 while True:
     # Receive audio
-    samples = demodulator.receive( slice_size, soundcard_in, slice_size )
+    left, right = receiver.receive( slice_size, soundcard_in, slice_size )
 
-#    continue
-
-    assert( len(samples) == slice_size )
-
-    points = []
+    assert( len(left) == slice_size )
 
     # Draw samples
     left_edge = sample_num * WIDTH / window_size
-    for s in samples:
-        x_coor = sample_num * WIDTH / window_size
-        y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
-        points.append( (int(x_coor), int(y_coor)) )
-        points.append( (int(x_coor)+1, int(y_coor)) )
-        points.append( (int(x_coor), int(y_coor)+1) )
-        points.append( (int(x_coor)+1, int(y_coor)+1) )
-        sample_num += 1
-        right_edge = x_coor + 2
-    
+
+    left_pts = makepoints( sample_num, left )
+    right_pts = makepoints( sample_num, right )
+    right_edge = left_pts[-1][0] + 2
+
+    sample_num += slice_size
+
     # Clear screen and draw guides
     context.foreground = bg
     pixmap.draw_rectangle( context, True, left_edge, 0, right_edge - left_edge, HEIGHT )
     context.foreground = axes
     pixmap.draw_line( context, 0, int(HEIGHT/2), WIDTH, int(HEIGHT/2) )
-    context.foreground = guides
-    pixmap.draw_line( context, 0, int(HEIGHT/4), WIDTH, int(HEIGHT/4) )
-    pixmap.draw_line( context, 0, int(3*HEIGHT/4), WIDTH, int(3*HEIGHT/4) )
+#    context.foreground = guides
+#    pixmap.draw_line( context, 0, int(HEIGHT/4), WIDTH, int(HEIGHT/4) )
+#    pixmap.draw_line( context, 0, int(3*HEIGHT/4), WIDTH, int(3*HEIGHT/4) )
     context.foreground = cursor
     pixmap.draw_line( context, right_edge, 0, right_edge, HEIGHT )
 
     # Draw points
-    context.foreground = fg
-    pixmap.draw_points(context, points)
+    context.foreground = fgleft
+    pixmap.draw_lines(context, left_pts)
+    context.foreground = fgright
+    pixmap.draw_lines(context, right_pts)
 
     drawable.draw_drawable( context, pixmap, 0, 0, 0, 0, -1, -1 )
 
