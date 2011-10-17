@@ -11,8 +11,8 @@ import pyaudio
 # Configuration
 WIDTH=1024
 HEIGHT=512
-window_size = 2048
-slice_size = 16
+window_size = 4096
+slice_size = 64
 
 # Open soundcard
 p = pyaudio.PyAudio()

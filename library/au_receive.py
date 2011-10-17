@@ -63,6 +63,7 @@ class TwoChannelReceiver:
 
     def receive( self, num_samples, stream, samples_per_chunk ):
         factor = int( 1.0 / passband )
+        factor = 1
 
         leftsamp, rightsamp = raw_receive( num_samples * factor, stream, samples_per_chunk )
         leftsamp = self.leftrec.demodulate( leftsamp )[::factor]
