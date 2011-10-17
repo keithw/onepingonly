@@ -7,6 +7,7 @@ import pygtk
 import gtk
 import gobject
 import pyaudio
+import pango
 
 # Configuration
 WIDTH=1024
@@ -40,6 +41,8 @@ bg = colormap.alloc_color( "white" )
 axes = colormap.alloc_color( "black" )
 #guides = colormap.alloc_color( "blue" )
 cursor = colormap.alloc_color( "green" )
+
+font = gtk.load_font('-*-*-medium-r-normal-*-*-230-*-*-*-*-iso8859-*')
 
 sample_num = 0
 
@@ -95,6 +98,15 @@ while True:
     pixmap.draw_lines(context, left_pts)
     context.foreground = fgright
     pixmap.draw_lines(context, right_pts)
+
+    context.foreground = bg
+    context.background = bg
+    pixmap.draw_rectangle( context, True, 900, 470, 100, 100 )
+    context.foreground = fgleft
+
+    amps = receiver.amplification()
+
+    pixmap.draw_text( font, context, 920, 500, "%.1fx" % (amps[0]/amps[1]) )
 
     drawable.draw_drawable( context, pixmap, 0, 0, 0, 0, -1, -1 )
 

@@ -70,6 +70,9 @@ class TwoChannelReceiver:
         rightsamp = self.rightrec.demodulate( rightsamp )[::factor]
         return (leftsamp, rightsamp)
 
+    def amplification( self ):
+        return ( self.leftrec.amplification(), self.rightrec.amplification() )
+
 class Receiver:
     def receive( self, num_samples, stream, samples_per_chunk ):
         factor = int( 1.0 / passband )
@@ -88,6 +91,9 @@ class Receiver:
         self.amplitudes = []
         self.amplitude_sum = 0
         self.samples_in_amplitude_history = 0
+
+    def amplification( self ):
+        return 1/ abs(self.amplitude_sum / self.samples_in_amplitude_history)
 
     def demodulate( self, samples ):
         # Tune in band around carrier frequency

@@ -14,10 +14,7 @@ soundcard_out = p.open(format = FORMAT,
                        output = True,
                        frames_per_buffer = 4096 )
 
-#VOLTAGES = [ 1, 0.5, 0, -0.5, -1, 0, 0, 0 ]
-#VOLTAGES = [ -1, -1, -1, -1, 1, 1, 1, 1]
 VOLTAGES = [1, -1]
-#VOLTAGES = [1, 1, -.333, 1]
 VOLTAGE_LENGTH = 1024
 
 samples = []
