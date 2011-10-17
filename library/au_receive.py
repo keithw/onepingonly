@@ -35,7 +35,7 @@ tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.75 * 1.025, pa
                                                    [ passband * 0.75 * 0.975, passband * 1.25 * 1.025 ],
                                                    1, 40 )
 
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.5, passband, 3, 30 )
+filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.85, passband * 0.95, 1, 30 )
 
 def decimate( samples, factor ):
     return samples[::factor]
@@ -110,9 +110,11 @@ class Demodulator:
             amplitude_overall_average = 1
 
         # Shift samples in time back to original phase and amplitude (using carrier)
-        constant = (DC/AMPLITUDE)/amplitude_overall_average
-        constant2 = DC/AMPLITUDE
+        constant = 2*(DC/AMPLITUDE)/amplitude_overall_average
+        constant2 = 2*DC/AMPLITUDE
         shifted_samples = demodulated_samples * constant - constant2
+
+        shifted_samples = [x.real for x in shifted_samples]
 
         # Low-pass filter
         filtered_samples, self.filter_state = scipy.signal.lfilter( filter_numer, filter_denom, shifted_samples, zi=self.filter_state )
