@@ -12,7 +12,7 @@ import pyaudio
 WIDTH=1024
 HEIGHT=512
 window_size = 2048
-slice_size = 32
+slice_size = 16
 
 # Open soundcard
 p = pyaudio.PyAudio()
@@ -45,8 +45,10 @@ sample_num = 0
 
 receiver = au_receive.TwoChannelReceiver()
 
-def makepoints( init_num, samples ):
+def makepoints( init_num, samples, firstpt ):
     points = []
+    if ( firstpt[0] > 0 ):
+        points.append( firstpt )
     for s in samples:
         x_coor = init_num * WIDTH / window_size
         y_coor = HEIGHT - ( HEIGHT / 2 + (HEIGHT/4) * s )
@@ -57,6 +59,9 @@ def makepoints( init_num, samples ):
         init_num += 1
     return points
 
+saveleft = (0,0)
+saveright = (0,0)
+
 while True:
     # Receive audio
     left, right = receiver.receive( slice_size, soundcard_in, slice_size )
@@ -65,10 +70,12 @@ while True:
 
     # Draw samples
     left_edge = sample_num * WIDTH / window_size
-
-    left_pts = makepoints( sample_num, left )
-    right_pts = makepoints( sample_num, right )
+    left_pts = makepoints( sample_num, left, saveleft )
+    right_pts = makepoints( sample_num, right, saveright )
     right_edge = left_pts[-1][0] + 2
+
+    saveleft = left_pts[-1]
+    saveright = right_pts[-1]
 
     sample_num += slice_size
 
@@ -93,3 +100,5 @@ while True:
 
     if sample_num >= window_size:
         sample_num = 0
+        saveleft = (0,0)
+        saveright = (0,0)
