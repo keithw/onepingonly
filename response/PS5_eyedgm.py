@@ -2,7 +2,7 @@
 import au_sendreceive
 import numpy
 import matplotlib
-matplotlib.use('macosx')
+#matplotlib.use('macosx')
 import matplotlib.pyplot as p
 import PS5_tests
 
@@ -77,10 +77,12 @@ if __name__ == '__main__':
 #    channel2 = PS5_tests.channel(channelid='2')
     auchan = au_sendreceive.channel()
 
+    p.ion()
+
     # plot the eye diagram for the three virtual channels
 #    plot_eye_diagram(channel0,'0',samples_per_bit=50)
 #    plot_eye_diagram(channel1,'1',samples_per_bit=50)
 #    plot_eye_diagram(channel2,'2',samples_per_bit=50)
-    plot_eye_diagram(auchan,'audio',samples_per_bit=4)
+    plot_eye_diagram(auchan,'audio',samples_per_bit=50)
 
     p.show()

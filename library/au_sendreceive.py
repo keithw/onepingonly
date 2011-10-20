@@ -66,7 +66,7 @@ class channel:
             sample_id += 1
 
         if silent_count < 512:
-            print "Could not find silence before preamble"
+            print "Could not find silence before preamble -- too much noise?"
             return []
 
         print 'found carrier'
