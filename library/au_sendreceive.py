@@ -14,7 +14,7 @@ DECIMATION_FACTOR = int( 1.0 / passband )
 
 PREAMBLE_BITS = 32
 PREAMBLE_BIT_LEN = 128
-SECOND_CARRIER_LEN = 256
+SECOND_CARRIER_LEN = 512
 
 class channel:
     def __call__( self, samples ):
@@ -29,7 +29,8 @@ class channel:
 
         packet.extend( samples )
 
-        packet.extend( [0] * 16384 )
+        packet.extend( [0] * 128 )
+        packet.extend( [-1] * 16384 )
 
         # prepare modulated output
         samples_out = modulate( expand( packet, DECIMATION_FACTOR), SAMPLES_PER_CHUNK )
@@ -140,12 +141,44 @@ class channel:
         # equalize lengths
         expected_preamble = expected_preamble[0:len(preamble_decoded)]
         out_of_phase_preamble = out_of_phase_preamble[0:len(preamble_decoded)]
-        preamble_decoded = preamble_decoded[0:len(expected_preamble)]
-            
-        preamble_I = numpy.dot(preamble_decoded, numpy.array(expected_preamble))
-        preamble_Q = numpy.dot(preamble_decoded, numpy.array(out_of_phase_preamble))
+        preamble_decoded_trunc = preamble_decoded[0:len(expected_preamble)]
+
+        # find phase and offset (in samples) of preamble
+        preamble_I = numpy.dot(preamble_decoded_trunc, numpy.array(expected_preamble))
+        preamble_Q = numpy.dot(preamble_decoded_trunc, numpy.array(out_of_phase_preamble))
 
         offset = int(0.5 + PREAMBLE_BIT_LEN * math.atan2( preamble_Q, preamble_I ) / math.pi)
+
+        print "Preamble was offset %d samples relative to initial rough detection" % (offset - (PREAMBLE_BIT_LEN/4))
+
+        # find signal-to-noise ratio (just for fun)
+        max_power = 0
+        signal_power = 0
+        noise_power = 0
+        noise_average = 0
+        one = numpy.array(one)
+        zero = numpy.array(zero)
+        for i in range( PREAMBLE_BITS / 2 ):
+            this_offset = offset + i * PREAMBLE_BIT_LEN*2
+            preamble_one = preamble_decoded[ this_offset : this_offset + PREAMBLE_BIT_LEN ]
+            preamble_zero = preamble_decoded[ this_offset + PREAMBLE_BIT_LEN : this_offset + 2 * PREAMBLE_BIT_LEN ]
+            
+            signal_power += sum(preamble_one * preamble_one) + sum(preamble_zero * preamble_zero)
+            max_power += sum(one * one) + sum(zero * zero)
+            average_one = sum(preamble_one) / len(preamble_one)
+            average_zero = sum(preamble_zero) / len(preamble_zero)
+            one_diff = preamble_one - numpy.array([average_one] * PREAMBLE_BIT_LEN)
+            zero_diff = preamble_zero - numpy.array([average_zero] * PREAMBLE_BIT_LEN)
+            noise_power += sum(one_diff * one_diff) + sum(zero_diff * zero_diff)
+
+        if signal_power / max_power < 0.3:
+            print "WARNING: Preamble power very low relative to expected"
+            print "We probably did not correctly detect this packet."
+            return []
+
+        snr = signal_power / noise_power
+        snr_in_db = 10 * math.log10(snr)
+        print "Signal-to-noise ratio: %.2f dB" % snr_in_db
 
         payload_start = preamble_start + offset + PREAMBLE_BIT_LEN * PREAMBLE_BITS + SECOND_CARRIER_LEN
 
@@ -159,9 +192,9 @@ class channel:
 
         offset_within_payload = payload_start - preamble_end
 
-        if len(version2) + offset_within_payload < len(samples):
+        if len(version2) - offset_within_payload < len(samples):
             print "warning: short packet. May need to lengthen trailer!"
-        assert( len(version2) + offset_within_payload >= len(samples) )
+        assert( len(version2) - offset_within_payload >= len(samples) )
 
         return version2[offset_within_payload:offset_within_payload+len(samples)]
 
