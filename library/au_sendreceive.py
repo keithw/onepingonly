@@ -102,19 +102,26 @@ class channel:
             else:
                 silent_count = 0
 
-            if silent_count >= SECOND_CARRIER_LEN / 2:
+            if silent_count >= SECOND_CARRIER_LEN:
                 break
             sample_id += 1
 
-        if silent_count != SECOND_CARRIER_LEN / 2:
+        if silent_count != SECOND_CARRIER_LEN:
             print "Could not find silence after preamble"
             return []
+
+        preamble_end = sample_id
+
+        preamble_len = preamble_end - preamble_start
 
         print 'found second carrier'
         # now that we've identified the payload, use one AGC setting for whole thing
         self.receiver.clear_amplitude_history()
-        
-        version2 = au_receive.decimate( self.receiver.demodulate( samples_all[ sample_id * DECIMATION_FACTOR : ] ),
+
+        # use preamble as the reference carrier
+        self.receiver.demodulate( samples_all[ preamble_start * DECIMATION_FACTOR : preamble_end * DECIMATION_FACTOR ] )
+        version2 = au_receive.decimate( self.receiver.demodulate( samples_all[ preamble_end * DECIMATION_FACTOR : ],
+                                                                  include_this_carrier=False ),
                                         DECIMATION_FACTOR )
 
         print "got %d samples after preamble" % len(version2)
