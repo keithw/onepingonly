@@ -11,16 +11,20 @@ passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
 DECIMATION_FACTOR = int( 1.0 / passband )
 
+PREAMBLE_BITS = 32
+PREAMBLE_BIT_LEN = 128
+SECOND_CARRIER_LEN = 256
+
 class channel:
     def __call__( self, samples ):
         # prepare premable
         packet = [0] * 8192
-        one = [1] * 128
-        zero = [-1] * 128
-        for i in range( 8 ):
+        one = [1] * PREAMBLE_BIT_LEN
+        zero = [-1] * PREAMBLE_BIT_LEN
+        for i in range( PREAMBLE_BITS / 2 ):
             packet.extend( one )
             packet.extend( zero )
-        packet.extend( [0] * 128 )
+        packet.extend( [0] * SECOND_CARRIER_LEN )
 
         packet.extend( samples )
 
@@ -64,26 +68,29 @@ class channel:
             return []
 
         print 'found carrier'
+
+        preamble_start = sample_id
+
         # search for preamble bits
         preamble_bitsearch = 1
         preamble_bitcount = 0
         thisbit_count = 0
         while sample_id < len(raw_received):
-            if raw_received[ sample_id ] * preamble_bitsearch >= 0.3:
+            if raw_received[ sample_id ] * preamble_bitsearch >= 0.2:
                 thisbit_count += 1
             else:
                 thisbit_count = 0
 
-            if thisbit_count >= 16:
+            if thisbit_count >= PREAMBLE_BIT_LEN / 4:
                 preamble_bitcount += 1
                 preamble_bitsearch *= -1
                 thisbit_count = 0
-            if preamble_bitcount == 16:
+            if preamble_bitcount == PREAMBLE_BITS:
                 break
             sample_id += 1
 
-        if preamble_bitcount != 16:
-            print "Could not find 16 preamble bits, found only %d" % preamble_bitcount
+        if preamble_bitcount != PREAMBLE_BITS:
+            print "Could not find %d preamble bits, found only %d" % (PREAMBLE_BITS, preamble_bitcount)
             return []
 
         print 'found preamble'
@@ -95,17 +102,18 @@ class channel:
             else:
                 silent_count = 0
 
-            if silent_count >= 128:
+            if silent_count >= SECOND_CARRIER_LEN / 2:
                 break
             sample_id += 1
 
-        if silent_count != 128:
+        if silent_count != SECOND_CARRIER_LEN / 2:
             print "Could not find silence after preamble"
             return []
 
         print 'found second carrier'
         # now that we've identified the payload, use one AGC setting for whole thing
         self.receiver.clear_amplitude_history()
+        
         version2 = au_receive.decimate( self.receiver.demodulate( samples_all[ sample_id * DECIMATION_FACTOR : ] ),
                                         DECIMATION_FACTOR )
 

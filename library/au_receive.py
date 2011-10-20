@@ -98,7 +98,7 @@ class Receiver:
     def amplification( self ):
         return 1/ abs(self.amplitude_sum / self.samples_in_amplitude_history)
 
-    def demodulate( self, samples ):
+    def demodulate( self, samples, include_this_carrier=True ):
         # Tune in band around carrier frequency
         samples, self.tuner_state = scipy.signal.lfilter( tuner_numer, tuner_denom, samples, zi=self.tuner_state )
 
@@ -110,15 +110,16 @@ class Receiver:
 
         # calculate average amplitude (DC amplitude)
         # we will use this for auto gain control
-        total_amplitude = sum( demodulated_samples )
-        self.amplitudes.append( total_amplitude )
-        self.amplitude_sum += total_amplitude 
-        self.samples_in_amplitude_history += sample_count
+        if include_this_carrier:
+            total_amplitude = sum( demodulated_samples )
+            self.amplitudes.append( total_amplitude )
+            self.amplitude_sum += total_amplitude 
+            self.samples_in_amplitude_history += sample_count
 
-        while self.samples_in_amplitude_history - sample_count >= num_amplitudes:
-            self.amplitude_sum -= self.amplitudes[ 0 ]
-            self.amplitudes.pop( 0 )
-            self.samples_in_amplitude_history -= sample_count
+            while self.samples_in_amplitude_history - sample_count >= num_amplitudes:
+                self.amplitude_sum -= self.amplitudes[ 0 ]
+                self.amplitudes.pop( 0 )
+                self.samples_in_amplitude_history -= sample_count
 
         amplitude_overall_average = self.amplitude_sum / self.samples_in_amplitude_history
 
