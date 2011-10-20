@@ -18,6 +18,14 @@ SECOND_CARRIER_LEN = 512
 
 class channel:
     def __call__( self, samples ):
+        # open soundcard
+        self.soundcard_inout = self.p.open(format = FORMAT,
+                                           channels = CHANNELS,
+                                           rate = SAMPLES_PER_SECOND,
+                                           input = True,
+                                           output = True,
+                                           frames_per_buffer = SAMPLES_PER_CHUNK)
+
         # prepare premable
         packet = [0] * 8192
         one = [1] * PREAMBLE_BIT_LEN
@@ -194,10 +202,14 @@ class channel:
 
         offset_within_payload = payload_start - preamble_end
 
+        print "Payload found at offset: %d samples" % payload_start
+
         if len(version2) - offset_within_payload < len(samples):
-            print "warning: short packet. May need to lengthen trailer!"
+            print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
             return []
         assert( len(version2) - offset_within_payload >= len(samples) )
+
+        self.soundcard_inout.close()
 
         return version2[offset_within_payload:offset_within_payload+len(samples)]
 
@@ -205,13 +217,5 @@ class channel:
         self.id = "Audio"
 
         self.p = pyaudio.PyAudio()
-
-        # open soundcard
-        self.soundcard_inout = self.p.open(format = FORMAT,
-                                           channels = CHANNELS,
-                                           rate = SAMPLES_PER_SECOND,
-                                           input = True,
-                                           output = True,
-                                           frames_per_buffer = SAMPLES_PER_CHUNK)
 
         self.receiver = au_receive.Receiver()

@@ -112,16 +112,19 @@ class Receiver:
         # we will use this for auto gain control
         if include_this_carrier:
             total_amplitude = sum( demodulated_samples )
-            self.amplitudes.append( total_amplitude )
+            self.amplitudes.append( (total_amplitude, sample_count) )
             self.amplitude_sum += total_amplitude 
             self.samples_in_amplitude_history += sample_count
 
-            while self.samples_in_amplitude_history - sample_count >= num_amplitudes:
-                self.amplitude_sum -= self.amplitudes[ 0 ]
+            while self.samples_in_amplitude_history - self.amplitudes[ 0 ][ 1 ] >= num_amplitudes:
+                self.amplitude_sum -= self.amplitudes[ 0 ][ 0 ]
+                self.samples_in_amplitude_history -= self.amplitudes[ 0 ][ 1 ]
                 self.amplitudes.pop( 0 )
-                self.samples_in_amplitude_history -= sample_count
 
         amplitude_overall_average = self.amplitude_sum / self.samples_in_amplitude_history
+
+        if not include_this_carrier:
+            self.clear_amplitude_history()
 
         if amplitude_overall_average == 0:
             amplitude_overall_average = 1
