@@ -1,88 +1,81 @@
 # template for PSet #3, Python Task #1
+import random
+import sys
 import au_sendreceive
 import numpy
 import matplotlib
-#matplotlib.use('macosx')
+matplotlib.use('macosx')
 import matplotlib.pyplot as p
 import PS5_tests
+import PS5_usr
 
-def all_bit_patterns(n):
-    # generate all possible n-bit bit sequences and merge into a single array
-    message = [0] * (n * 2**n)
-    for i in xrange(2**n):
-        for j in xrange(n):
-            message[i*n + j] = 1 if (i & (2**j)) else 0
+# generate all possible b-bit bit sequences and merge into a single array
+def all_bit_patterns(b):
+    message = [0] * (b * 2**b)
+    for i in xrange(2**b):
+        for j in xrange(b):
+            message[i*b + j] = 1 if (i & (2**j)) else 0
     return numpy.array(message,dtype=numpy.int)
 
-def plot_eye_diagram_fast(channel,plot_label, samples_per_bit):
+# m random bit patterns of b bits
+def rand_bit_patterns(b,m):
+    message = [0] * (b * m)
+    for i in xrange(m):
+        for j in xrange(b):
+            r = random.randint(0,1)
+            message[i*b + j] = r
+    return  numpy.array(message,dtype=numpy.int)
+
+def plot_eye_diagram(channel,plot_label,hlen,samples_per_bit):
     """
-    Plot eye diagram for given channel using all possible 6-bit patterns
-    merged together as message. plot_label is the label used in the eye
-    diagram, Samples_per_bit determines how many samples
-    are sent for each message bit.
+    For the given channel, you should generate a bit sequence made of all
+    possible B bit messages (you can use the all_bit_patterns function
+    above), where B is picked using the formula B = floor(hlen/N) + 2.
+    Then plot the received samples by overlaying sets of
+    2*samples_per_bit + 1 samples.
     """
 
-    # build message
-    message = all_bit_patterns(6)
-    
-    # send it through the channel
-    result = channel(lab1.bits_to_samples(message,samples_per_bit))
-
-    # Truncate the result so length is divisible by 3*samples_per_bit
-    result = result[0:len(result)-(len(result) % (3*samples_per_bit))]
-
-    # Turn the result in to a n by 3*samples_per_bit matrix, and plot each row
-    mat_samples = numpy.reshape(result,(-1,3*samples_per_bit))
-    p.figure()
-    p.plot(mat_samples.T)
-    p.title('Eye diagram for channel %s' % plot_label)
-
-
-def plot_eye_diagram(channel,plot_label, samples_per_bit):
-    """
-    Your, more educational, version of plot_eye_diagram.  For the
-    given channel, you should generate a bit sequence made of all
-    possible 3 bit messages (you can use the all_bit_patterns function
-    above), and then plot the received samples by overlaying sets of
-    3*samples_per_bit.  So that you can watch the eye diagram form,
-    have the program stop for a press of enter after every
-    3*samples_per_bit plot The python function raw_input('Press enter
-    to continue') will help.
-    """
+    B = hlen/samples_per_bit + 2
     # Number of samples in a plot interval
-    interval = 3*samples_per_bit
+    interval = 2*samples_per_bit
 
     # build message
-    message = all_bit_patterns(3)
+    if B < 7:
+        message = all_bit_patterns(B)
+    else:
+#        print 'Too many bit patterns; increase samples_per_bit'
+#        sys.exit(1)
+        message = rand_bit_patterns(B,64)
     
     # send it through the channel
-    result = channel(PS5_tests.bits_to_samples(message,samples_per_bit))
+    result = channel(PS5_tests.bits_to_samples(message,samples_per_bit,v0=-1,v1=1))
 
     # Truncate the result so length is divisible by interval
     result = result[0:len(result)-(len(result) % interval)]
 
-    # produce the eye diagram one line at a time, waiting for a key press
+    # produce the eye diagram overlaid appropriately
     p.figure()
-    for i in range(0,len(result),3*samples_per_bit):
+    for i in range(0,len(result),samples_per_bit):
         p.plot(result[i:i+interval])
-        raw_input("Press Enter to continue")
+#        raw_input("Press Enter to continue")
 
     # Finally add the title
     p.title('Eye diagram for channel %s' % plot_label)
+
+def run_channel_eye(channel, id, samples_per_bit):
+    l, unit_step_resp = PS5_usr.unit_step_response(channel, wsize=20, tol=0.01)
+    print 'Length of unit step response:', l
+    plot_eye_diagram(channel,id,hlen=l,samples_per_bit=samples_per_bit)
 
 if __name__ == '__main__':
     # Create the channels (noise free)
 #    channel0 = PS5_tests.channel(channelid='0')
 #    channel1 = PS5_tests.channel(channelid='1')
 #    channel2 = PS5_tests.channel(channelid='2')
-    auchan = au_sendreceive.channel()
-
-    p.ion()
-
-    # plot the eye diagram for the three virtual channels
-#    plot_eye_diagram(channel0,'0',samples_per_bit=50)
-#    plot_eye_diagram(channel1,'1',samples_per_bit=50)
-#    plot_eye_diagram(channel2,'2',samples_per_bit=50)
-    plot_eye_diagram(auchan,'audio',samples_per_bit=50)
+    for i in range(0,3):
+        print 'Software channel', i
+#        run_channel_eye(PS5_tests.channel(channelid=str(i)), str(i), 6)
+    # run acoustic channel and plot its eye diagram
+    run_channel_eye(au_sendreceive.channel(), 'acoustic', samples_per_bit=10)
 
     p.show()

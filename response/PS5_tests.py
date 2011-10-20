@@ -104,7 +104,7 @@ def plot_USR(response,name):
     smax = max(response)
     ds = smax - smin
     p.axis([-.5,len(response)+.5,smin - 0.1*ds,smax + 0.1*ds])
-    p.title('Unit-step response of channel %s' % name)
+    p.title('Response of channel %s' % name)
     p.xlabel('Sample number')
     p.ylabel('Voltage')
 
@@ -137,7 +137,7 @@ def maxdiff(x,w):
 # convert digital sample sequence into voltages; result is numpy array.
 # samples_per_bit can be a float (eg, 8.1) to model clock
 # drift in the transmitter.
-# NOTE: NO DEFAULT VALUES FOR SAMPLES_PER_BIT, causes confusion
+# NOTE JKW; NO DEFAULT VALUES FOR SAMPLES_PER_BIT, causes confusion
 def bits_to_samples(bits,samples_per_bit,
                     npreamble=0,
                     npostamble=0,
