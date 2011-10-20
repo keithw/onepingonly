@@ -42,9 +42,11 @@ cursor = colormap.alloc_color( "green" )
 
 sample_num = 0
 
+receiver = au_receive.Receiver()
+
 while True:
     # Receive audio
-    samples = au_receive.receive( slice_size, soundcard_in, slice_size )
+    samples = receiver.receive( slice_size, soundcard_in, slice_size )
 
     assert( len(samples) == slice_size )
 

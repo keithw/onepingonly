@@ -1,5 +1,5 @@
 from au_send import *
-from au_receive import *
+import au_receive
 import pyaudio
 
 from au_defs import *
@@ -34,17 +34,17 @@ class channel:
         # send output and collect input
         for chunk in samples_out:
             raw_send( [chunk], self.soundcard_inout )
-            samples_in.append( raw_receive( SAMPLES_PER_CHUNK,
-                                            self.soundcard_inout, SAMPLES_PER_CHUNK ) )
+            samples_in.append( au_receive.raw_receive( SAMPLES_PER_CHUNK,
+                                                       self.soundcard_inout, SAMPLES_PER_CHUNK ) )
 
         # demodulate input
         raw_received = []
         samples_all = []
         for chunk in samples_in:
-            raw_received.extend( demodulate( chunk ) )
+            raw_received.extend( self.receiver.demodulate( chunk ) )
             samples_all.extend( chunk )
 
-        raw_received = decimate( raw_received, DECIMATION_FACTOR )
+        raw_received = au_receive.decimate( raw_received, DECIMATION_FACTOR )
 
         # find silent part of preamble
         silent_count = 0
@@ -69,8 +69,7 @@ class channel:
         preamble_bitcount = 0
         thisbit_count = 0
         while sample_id < len(raw_received):
-#            if raw_received[ sample_id ] * preamble_bitsearch >= 0.3:
-            if raw_received[ sample_id ] * preamble_bitsearch >= 0.02:
+            if raw_received[ sample_id ] * preamble_bitsearch >= 0.3:
                 thisbit_count += 1
             else:
                 thisbit_count = 0
@@ -106,9 +105,9 @@ class channel:
 
         print 'found second carrier'
         # now that we've identified the payload, use one AGC setting for whole thing
-        clear_amplitude_history()
-        version2 = decimate( demodulate( samples_all[ sample_id * DECIMATION_FACTOR : ] ),
-                             DECIMATION_FACTOR )
+        self.receiver.clear_amplitude_history()
+        version2 = au_receive.decimate( self.receiver.demodulate( samples_all[ sample_id * DECIMATION_FACTOR : ] ),
+                                        DECIMATION_FACTOR )
 
         print "got %d samples after preamble" % len(version2)
         if len(version2) < len(samples):
@@ -129,3 +128,5 @@ class channel:
                                            input = True,
                                            output = True,
                                            frames_per_buffer = SAMPLES_PER_CHUNK)
+
+        self.receiver = au_receive.Receiver()

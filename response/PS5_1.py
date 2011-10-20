@@ -2,7 +2,7 @@
 import au_sendreceive
 import numpy
 import matplotlib
-matplotlib.use('macosx')
+#matplotlib.use('macosx')
 import matplotlib.pyplot as p
 import PS5_tests
 
