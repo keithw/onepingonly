@@ -56,7 +56,7 @@ class channel:
         silent_count = 0
         sample_id = 0
         while sample_id < len(raw_received):
-            if abs( raw_received[ sample_id ] ) < 0.5:
+            if abs( raw_received[ sample_id ] ) < 0.7:
                 silent_count += 1
             else:
                 silent_count = 0
@@ -101,7 +101,7 @@ class channel:
         # search for silence
         silent_count = 0
         while sample_id < len(raw_received):
-            if abs( raw_received[ sample_id ] ) < 0.5:
+            if abs( raw_received[ sample_id ] ) < 0.7:
                 silent_count += 1
             else:
                 silent_count = 0
@@ -136,7 +136,9 @@ class channel:
         out_of_phase_preamble.extend( expected_preamble )
         out_of_phase_preamble = out_of_phase_preamble[0:len(expected_preamble)]
 
-        assert( abs(len(preamble_decoded) - PREAMBLE_BIT_LEN/4 - SECOND_CARRIER_LEN/2 - len(expected_preamble)) <= PREAMBLE_BIT_LEN/2 )
+        if abs(len(preamble_decoded) - PREAMBLE_BIT_LEN/4 - SECOND_CARRIER_LEN/2 - len(expected_preamble)) > PREAMBLE_BIT_LEN/2:
+            print "Warning: Preamble offset too great to be corrected -- too much noise?"
+            return []
         
         # equalize lengths
         expected_preamble = expected_preamble[0:len(preamble_decoded)]
@@ -194,6 +196,7 @@ class channel:
 
         if len(version2) - offset_within_payload < len(samples):
             print "warning: short packet. May need to lengthen trailer!"
+            return []
         assert( len(version2) - offset_within_payload >= len(samples) )
 
         return version2[offset_within_payload:offset_within_payload+len(samples)]
