@@ -33,9 +33,9 @@ passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
 tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.5 * 1.025, passband * 1.5 * 0.975 ],
                                                    [ passband * 0.5 * 0.975, passband * 1.5 * 1.025 ],
-                                                   1, 40 )
+                                                   .1, 30 )
 
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.85, passband * 0.95, 1, 40 )
+filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.85, passband * 0.95, .1, 30 )
 
 def decimate( samples, factor ):
     return samples[::factor]
