@@ -26,7 +26,7 @@ def unit_step_response(channel,max_length=100):
 
     """
 #    step = [0]*(max_length*3/2) + [-1]*(max_length/2) + [1]*(max_length) + [-1]*(max_length/2) + [1]*(max_length/2) 
-    step = [0] * 100 + [1] * 100 + [-1] * 200 + [1] * 100 + [0] * 100
+    step = [0] * 100 + [1] * 100
     step_response = channel(step)
 #    return step_response[max_length/2 - 128: max_length/2 + 128]
     return step_response

@@ -1,6 +1,7 @@
 from au_send import *
 import au_receive
 import pyaudio
+import numpy
 
 from au_defs import *
 
@@ -69,7 +70,7 @@ class channel:
 
         print 'found carrier'
 
-        preamble_start = sample_id
+        preamble_start = -1
 
         # search for preamble bits
         preamble_bitsearch = 1
@@ -85,6 +86,8 @@ class channel:
                 preamble_bitcount += 1
                 preamble_bitsearch *= -1
                 thisbit_count = 0
+                if preamble_start < 0:
+                    preamble_start = sample_id - PREAMBLE_BIT_LEN / 2 # include some carrier
             if preamble_bitcount == PREAMBLE_BITS:
                 break
             sample_id += 1
@@ -102,11 +105,11 @@ class channel:
             else:
                 silent_count = 0
 
-            if silent_count >= SECOND_CARRIER_LEN:
+            if silent_count >= SECOND_CARRIER_LEN/2:
                 break
             sample_id += 1
 
-        if silent_count != SECOND_CARRIER_LEN:
+        if silent_count != SECOND_CARRIER_LEN/2:
             print "Could not find silence after preamble"
             return []
 
@@ -118,18 +121,49 @@ class channel:
         # now that we've identified the payload, use one AGC setting for whole thing
         self.receiver.clear_amplitude_history()
 
-        # use preamble as the reference carrier
-        self.receiver.demodulate( samples_all[ preamble_start * DECIMATION_FACTOR : preamble_end * DECIMATION_FACTOR ] )
+        # use preamble as the reference carrier for future demodulation
+        preamble_decoded = au_receive.decimate( self.receiver.demodulate( samples_all[ preamble_start * DECIMATION_FACTOR : preamble_end * DECIMATION_FACTOR ] ),
+                                                DECIMATION_FACTOR )
+
+        # find REAL phase of preamble
+        expected_preamble = []
+        for i in range( PREAMBLE_BITS / 2 ):
+            expected_preamble.extend( one )
+            expected_preamble.extend( zero )
+
+        out_of_phase_preamble = zero[:PREAMBLE_BIT_LEN/2]
+        out_of_phase_preamble.extend( expected_preamble )
+        out_of_phase_preamble = out_of_phase_preamble[0:len(expected_preamble)]
+
+        assert( abs(len(preamble_decoded) - PREAMBLE_BIT_LEN/4 - SECOND_CARRIER_LEN/2 - len(expected_preamble)) <= PREAMBLE_BIT_LEN/2 )
+        
+        # equalize lengths
+        expected_preamble = expected_preamble[0:len(preamble_decoded)]
+        out_of_phase_preamble = out_of_phase_preamble[0:len(preamble_decoded)]
+        preamble_decoded = preamble_decoded[0:len(expected_preamble)]
+            
+        preamble_I = numpy.dot(preamble_decoded, numpy.array(expected_preamble))
+        preamble_Q = numpy.dot(preamble_decoded, numpy.array(out_of_phase_preamble))
+
+        offset = int(0.5 + PREAMBLE_BIT_LEN * math.atan2( preamble_Q, preamble_I ) / math.pi)
+
+        payload_start = preamble_start + offset + PREAMBLE_BIT_LEN * PREAMBLE_BITS + SECOND_CARRIER_LEN
+
+        assert( payload_start > preamble_end )
+
+        # don't use payload as part of reference carrier
+        # this allows us to correctly decode payload that doesn't sum to zero
         version2 = au_receive.decimate( self.receiver.demodulate( samples_all[ preamble_end * DECIMATION_FACTOR : ],
                                                                   include_this_carrier=False ),
                                         DECIMATION_FACTOR )
 
-        print "got %d samples after preamble" % len(version2)
-        if len(version2) < len(samples):
-            print "warning: short packet. May need to lengthen trailer!"
-        assert( len(version2) > len(samples) )
+        offset_within_payload = payload_start - preamble_end
 
-        return version2[:len(samples)]
+        if len(version2) + offset_within_payload < len(samples):
+            print "warning: short packet. May need to lengthen trailer!"
+        assert( len(version2) + offset_within_payload >= len(samples) )
+
+        return version2[offset_within_payload:offset_within_payload+len(samples)]
 
     def __init__( self ):
         self.id = "Audio"
