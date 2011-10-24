@@ -5,7 +5,7 @@ import numpy
 
 from au_defs import *
 
-SAMPLES_PER_CHUNK = 512
+SAMPLES_PER_CHUNK = 128
 
 nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
 passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
@@ -27,7 +27,7 @@ class channel:
                                            frames_per_buffer = SAMPLES_PER_CHUNK)
 
         # prepare premable
-        packet = [0] * 8192
+        packet = [-1] * 16384 + [0] * 8192
         one = [1] * PREAMBLE_BIT_LEN
         zero = [-1] * PREAMBLE_BIT_LEN
         for i in range( PREAMBLE_BITS / 2 ):
