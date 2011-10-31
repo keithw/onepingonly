@@ -6,6 +6,8 @@ import StringIO
 import numpy
 import scipy.signal
 
+from au_filter import Filter
+
 from au_defs import *
 
 assert( abs( (float(SAMPLES_PER_SECOND) / float(CARRIER_CYCLES_PER_SECOND)) - (SAMPLES_PER_SECOND // CARRIER_CYCLES_PER_SECOND) ) < 0.01 )
@@ -13,14 +15,7 @@ assert( abs( (float(SAMPLES_PER_SECOND) / float(CARRIER_CYCLES_PER_SECOND)) - (S
 num_amplitudes = 4096
 
 nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
-
 passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
-
-tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.5 * 1.025, passband * 1.5 * 0.975 ],
-                                                   [ passband * 0.5 * 0.975, passband * 1.5 * 1.025 ],
-                                                   .1, 30 )
-
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.85, passband * 0.95, .1, 30 )
 
 def decimate( samples, factor ):
     return samples[::factor]
@@ -72,8 +67,8 @@ class Receiver:
         self.amplitude_sum = 0
         self.samples_in_amplitude_history = 0
 
-        self.tuner_state = scipy.signal.lfiltic( tuner_numer, tuner_denom, [] )
-        self.filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
+        self.tuner = Filter( 1000, 3000 )
+        self.lowpass = Filter( 0, 2000 )
 
     def clear_amplitude_history( self ):
         self.amplitudes = []
@@ -84,10 +79,10 @@ class Receiver:
         return 1/ abs(self.amplitude_sum / self.samples_in_amplitude_history)
 
     def demodulate( self, samples, include_this_carrier=True ):
-        # Tune in band around carrier frequency
-        samples, self.tuner_state = scipy.signal.lfilter( tuner_numer, tuner_denom, samples, zi=self.tuner_state )
-
         sample_count = len( samples )
+
+        # Tune in band around carrier frequency
+        samples = self.tuner( samples )
 
         # Shift the modulated waveform back down to baseband
         SAMPLES = numpy.arange( self.total_sample_count, self.total_sample_count + sample_count )
@@ -125,7 +120,7 @@ class Receiver:
         shifted_samples = [x.real for x in shifted_samples]
 
         # Low-pass filter
-        filtered_samples, self.filter_state = scipy.signal.lfilter( filter_numer, filter_denom, shifted_samples, zi=self.filter_state )
+        filtered_samples = self.lowpass( shifted_samples )
         
         return filtered_samples
     
