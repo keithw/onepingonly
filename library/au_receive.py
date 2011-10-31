@@ -10,12 +10,7 @@ from au_filter import Filter
 
 from au_defs import *
 
-assert( abs( (float(SAMPLES_PER_SECOND) / float(CARRIER_CYCLES_PER_SECOND)) - (SAMPLES_PER_SECOND // CARRIER_CYCLES_PER_SECOND) ) < 0.01 )
-
 num_amplitudes = 4096
-
-nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
-passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
 
 def decimate( samples, factor ):
     return samples[::factor]
@@ -46,11 +41,9 @@ class TwoChannelReceiver:
         self.rightrec = Receiver()
 
     def receive( self, num_samples, stream, samples_per_chunk ):
-        factor = int( 1.0 / passband )
-
-        leftsamp, rightsamp = raw_receive( num_samples * factor, stream, samples_per_chunk )
-        leftsamp = self.leftrec.demodulate( leftsamp )[::factor]
-        rightsamp = self.rightrec.demodulate( rightsamp )[::factor]
+        leftsamp, rightsamp = raw_receive( num_samples, stream, samples_per_chunk )
+        leftsamp = self.leftrec.demodulate( leftsamp )
+        rightsamp = self.rightrec.demodulate( rightsamp )
         return (leftsamp, rightsamp)
 
     def amplification( self ):
@@ -58,8 +51,7 @@ class TwoChannelReceiver:
 
 class Receiver:
     def receive( self, num_samples, stream, samples_per_chunk ):
-        factor = int( 1.0 / passband )
-        return self.demodulate( raw_receive( num_samples * factor, stream, samples_per_chunk ) )[::factor]
+        return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
     def __init__( self ):
         self.total_sample_count = 0
@@ -67,8 +59,8 @@ class Receiver:
         self.amplitude_sum = 0
         self.samples_in_amplitude_history = 0
 
-        self.tuner = Filter( 500, 3500 )
-        self.lowpass = Filter( 0, 2000 )
+        self.tuner = Filter( 2000, 3000 )
+        self.lowpass = Filter( 0, 500 )
 
     def clear_amplitude_history( self ):
         self.amplitudes = []

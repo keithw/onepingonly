@@ -18,15 +18,10 @@ for i in range( cachelen ):
 
 total_sample_count = 0
 
-nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
-passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
-
-print "Expansion: %f" % (1.0 / passband)
-
-lowpass = Filter( 0, 2000 )
+lowpass = Filter( 0, 500 )
 
 def send( samples, stream, samples_per_chunk ):
-    return raw_send( modulate( expand( samples, int( 1.0 / passband ) ),
+    return raw_send( modulate( samples, 
                                samples_per_chunk ),
                      stream )
 
