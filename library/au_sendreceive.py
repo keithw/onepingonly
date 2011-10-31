@@ -7,7 +7,74 @@ from au_defs import *
 
 SAMPLES_PER_CHUNK = 128
 
+class Searcher:
+    def __init__( self, samples ):
+        self.i = 0
+        self.samples = samples
+
+    def find( self, threshold, description, match_length, greater_than=False, absolute_value=True ):
+        matching_count = 0
+
+        def matcher( x ):
+            def val4val( x ):
+                if absolute_value: return abs(x)
+                else: return x
+
+            def test( x, y ):
+                if greater_than: return x > y
+                else: return x < y
+
+            return test( val4val( x ), val4val( threshold ) )
+
+        while self.i < len(self.samples):
+            if matcher( self.samples[ self.i ] ):
+                matching_count += 1
+            else:
+                matching_count = 0
+
+            if matching_count >= match_length:
+                break
+
+            self.i += 1
+
+        if matching_count < match_length:
+            raise Exception( "Count not find %s" % description )
+        
+        return self.i - match_length
+
 class channel:
+    def prepend_preamble( self, samples ):
+        # prepare premable
+        signal = [-1] * 16384 + [0] * 16384
+        for i in range( PREAMBLE_BITS / 2 ):
+            signal.extend( self.zero )
+            signal.extend( self.one )
+        signal.extend( [0] * SECOND_CARRIER_LEN )
+
+        signal.extend( samples )
+
+        signal.extend( [0] * 256 )
+        signal.extend( [-1] * 32768 )
+
+        # prepare modulated output
+        samples_out = modulate( signal, SAMPLES_PER_CHUNK )
+
+        return samples_out
+
+    def extract_payload( self, signal, payload_len ):
+        # find preamble in received signal
+        ( preamble_end, offset_within_payload ) = self.detect_preamble( signal )
+
+        # demodulate payload using carrier reference from preamble
+        version2 = self.receiver.demodulate( signal[ preamble_end : ],
+                                             include_this_carrier=False )
+
+        if len(version2) - offset_within_payload < payload_len:
+            print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
+            raise Exception( "Short read" )
+
+        return version2[offset_within_payload:offset_within_payload+payload_len]
+
     def __call__( self, samples ):
         # open soundcard
         self.soundcard_inout = self.p.open(format = FORMAT,
@@ -17,21 +84,7 @@ class channel:
                                            output = True,
                                            frames_per_buffer = SAMPLES_PER_CHUNK)
 
-        # prepare premable
-        packet = [-1] * 16384 + [0] * 16384
-        for i in range( PREAMBLE_BITS / 2 ):
-            packet.extend( self.zero )
-            packet.extend( self.one )
-        packet.extend( [0] * SECOND_CARRIER_LEN )
-
-        packet.extend( samples )
-
-        packet.extend( [0] * 256 )
-        packet.extend( [-1] * 32768 )
-
-        # prepare modulated output
-        samples_out = modulate( packet, SAMPLES_PER_CHUNK )
-
+        samples_out = self.prepend_preamble( samples )
         samples_in = []
 
         # send output and collect input
@@ -40,23 +93,12 @@ class channel:
             samples_in.append( au_receive.raw_receive( SAMPLES_PER_CHUNK,
                                                        self.soundcard_inout, SAMPLES_PER_CHUNK ) )
 
-        # demodulate input
-        samples_all = numpy.concatenate( samples_in )
-        ( preamble_end, offset_within_payload ) = self.detect_preamble( samples_all )
-
-        # don't use payload as part of reference carrier
-        # this allows us to correctly decode payload that doesn't sum to zero
-        version2 = self.receiver.demodulate( samples_all[ preamble_end : ],
-                                             include_this_carrier=False )
-
-        if len(version2) - offset_within_payload < len(samples):
-            print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
-            return []
-        assert( len(version2) - offset_within_payload >= len(samples) )
-
         self.soundcard_inout.close()
 
-        return version2[offset_within_payload:offset_within_payload+len(samples)]
+        # demodulate input
+        samples_all = numpy.concatenate( samples_in )
+
+        return self.extract_payload( samples_all, len( samples ) )
 
     def __init__( self ):
         self.id = "Audio"
@@ -71,83 +113,50 @@ class channel:
     def detect_preamble( self, received_signal ):
         raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.array_split( received_signal, 256 )] )
 
+        searcher = Searcher( raw_received )
+
         # find silent part of preamble
-        silent_count = 0
-        sample_id = 0
-        while sample_id < len(raw_received):
-            if abs( raw_received[ sample_id ] ) < 0.7:
-                silent_count += 1
-            else:
-                silent_count = 0
+        searcher.find( 0.7, "first tone in preamble", 512 )
 
-            if silent_count >= 512:
-                break # start looking for preamble bits
-            sample_id += 1
-
-        if silent_count < 512:
-            print "Could not find silence before preamble -- too much noise?"
-            return []
-
-        print 'found carrier'
-
-        preamble_start = -1
-        preamble_last = -1
+        print "Found first tone in preamble"
 
         # search for preamble bits
-        preamble_bitsearch = -1
-        preamble_bitcount = 0
-        thisbit_count = 0
-        while sample_id < len(raw_received):
-            if raw_received[ sample_id ] * preamble_bitsearch >= 0.2:
-                thisbit_count += 1
-            else:
-                thisbit_count = 0
+        preamble_last = -1
+        preamble_start = -1
+        preamble_bits_found = 0
+        while preamble_bits_found < PREAMBLE_BITS:
+            bit_polarity = (preamble_bits_found % 2) * 2 - 1
+            preamble_thisbit = searcher.find( 0.2 * bit_polarity,
+                                              ("preamble bit %d" % bit_polarity), PREAMBLE_BIT_LEN / 4,
+                                              greater_than=(bit_polarity==1),
+                                              absolute_value=False )
 
-            if thisbit_count >= PREAMBLE_BIT_LEN / 4:
-                preamble_bitcount += 1
-                preamble_bitsearch *= -1
-                thisbit_count = 0
-                if preamble_start < 0:
-                    preamble_start = sample_id - PREAMBLE_BIT_LEN/4
-                if preamble_last >= 0:
-                    if sample_id - preamble_last >= 3 * PREAMBLE_BIT_LEN / 2:
-                        print "WARNING: gap in preamble (of length %d) between bits %d and %d" % (sample_id - preamble_last, preamble_bitcount, preamble_bitcount - 1)
-                        print "Restarting preamble detection"
-                        preamble_start = sample_id - PREAMBLE_BIT_LEN/4
-                        preamble_bitcount = 1
-                        preamble_last = -1
-                preamble_last = sample_id
-            if preamble_bitcount == PREAMBLE_BITS:
-                break
-            sample_id += 1
+            preamble_bits_found += 1
 
-        if preamble_bitcount != PREAMBLE_BITS:
-            print "Could not find %d preamble bits, found only %d" % (PREAMBLE_BITS, preamble_bitcount)
-            return []
+            if preamble_start < 0:
+                preamble_start = preamble_thisbit
 
-        print 'found preamble'
+            if preamble_last >= 0:
+                if preamble_thisbit - preamble_last >= 2 * PREAMBLE_BIT_LEN:
+                    print "WARNING: gap in preamble (of length %d) between bits %d and %d" % (preamble_thisbit - preamble_last, preamble_bits_found, preamble_bits_found - 1)
+                    print "Restarting preamble detection"
+                    preamble_bits_found = 1
+                    preamble_start = preamble_thisbit
+                    preamble_last = -1
 
-        preamble_end = sample_id + 3*PREAMBLE_BIT_LEN/4
+            preamble_last = preamble_thisbit
+
+        print 'Found preamble'
+
+        preamble_end = preamble_thisbit + 3*PREAMBLE_BIT_LEN/4
 
         # search for silence
-        silent_count = 0
-        while sample_id < len(raw_received):
-            if abs( raw_received[ sample_id ] ) < 0.7:
-                silent_count += 1
-            else:
-                silent_count = 0
+        searcher.find( 0.7, "second tone in preamble", SECOND_CARRIER_LEN/2 )
 
-            if silent_count >= SECOND_CARRIER_LEN/2:
-                break
-            sample_id += 1
-
-        if silent_count != SECOND_CARRIER_LEN/2:
-            print "Could not find silence after preamble"
-            return []
+        print "Found second tone in preamble"
 
         preamble_len = preamble_end - preamble_start
 
-        print 'found second carrier'
         # now that we've identified the payload, use one AGC setting for whole thing
         self.receiver.clear_amplitude_history()
 
