@@ -12,20 +12,22 @@ class Filter:
         assert( band_stop >= 0 and band_stop <= 1 )
         assert( band_stop >= band_start )
 
-        if band_start <= 0.05: # make low pass filter
-            (self.feedforward_taps,
-             self.feedback_taps) = iirdesign( band_stop * 0.975, # end of pass band
-                                              band_stop * 1.025, # start of stop band
-                                              0.1,               # max attenuation (dB) in passband
-                                              30 )               # min attenuation (dB) in stopband
-        else:
-            (self.feedforward_taps,
-             self.feedback_taps) = iirdesign( [ band_start * 1.025,  # start of pass band
-                                                band_stop * 0.975 ], # end of pass band
-                                              [ band_start * 0.975,  # end of (lower) stop band
-                                                band_stop * 1.025 ], # start of (upper) stop band
-                                              0.1,                   # max atten (dB) in passband
-                                              30 )                   # min atten (dB) in stopband
+        passband_edges = []
+        stopband_edges = []
+
+        if band_start >= 0.05: # if not, make LPF only
+            passband_edges.append( band_start * 1.025 )
+            stopband_edges.append( band_start * 0.975 )
+
+        if band_stop <= 0.95: # if not, make HPF only
+            passband_edges.append( band_stop * 0.975 )
+            stopband_edges.append( band_stop * 1.025 )
+
+        (self.feedforward_taps,
+         self.feedback_taps) = iirdesign( passband_edges,
+                                          stopband_edges,
+                                          0.1,               # max attenuation (dB) in passband
+                                          30 )               # min attenuation (dB) in stopband
 
         self.filter_state = lfiltic( self.feedforward_taps, self.feedback_taps, [] )
 
