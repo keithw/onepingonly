@@ -34,8 +34,6 @@ class channel:
 
         samples_in = []
 
-        print "chunks: ", len(samples_out)
-
         # send output and collect input
         for chunk in samples_out:
             raw_send( [chunk], self.soundcard_inout )
@@ -43,9 +41,7 @@ class channel:
                                                        self.soundcard_inout, SAMPLES_PER_CHUNK ) )
 
         # demodulate input
-        print "about to run concat"
         samples_all = numpy.concatenate( samples_in )
-        print "about to run detect_preamble"
         ( preamble_end, offset_within_payload ) = self.detect_preamble( samples_all )
 
         # don't use payload as part of reference carrier
@@ -73,9 +69,7 @@ class channel:
         self.zero = [-1] * PREAMBLE_BIT_LEN
 
     def detect_preamble( self, received_signal ):
-        print "in detect preamble"
-        raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.split( received_signal, 256 )] )
-        print "initial demodulation"
+        raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.array_split( received_signal, 256 )] )
 
         # find silent part of preamble
         silent_count = 0
