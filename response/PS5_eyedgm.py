@@ -80,6 +80,6 @@ if __name__ == '__main__':
             run_channel_eye(PS5_tests.channel(channelid=str(i)), str(i), 20)
 """
     # run acoustic channel and plot its eye diagram
-    run_channel_eye(au_sendreceive.channel(), 'acoustic', samples_per_bit=10)
+    run_channel_eye(au_sendreceive.channel(), 'acoustic', samples_per_bit=50)
 
     p.show()

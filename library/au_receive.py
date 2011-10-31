@@ -6,36 +6,11 @@ import StringIO
 import numpy
 import scipy.signal
 
+from au_filter import Filter
+
 from au_defs import *
 
-TIME = 0 # seconds
-
-assert( abs( (float(SAMPLES_PER_SECOND) / float(CARRIER_CYCLES_PER_SECOND)) - (SAMPLES_PER_SECOND // CARRIER_CYCLES_PER_SECOND) ) < 0.01 )
-
-cachelen = 65536
-COS_CACHE = [0] * cachelen
-SIN_CACHE = [0] * cachelen
-for i in range( cachelen ):
-    COS_CACHE[ i ] = math.cos( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi )
-    SIN_CACHE[ i ] = math.sin( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi )
-    TIME += 1.0 / SAMPLES_PER_SECOND
-
-COS_CACHE = numpy.array(COS_CACHE)
-SIN_CACHE = numpy.array(SIN_CACHE)
-
 num_amplitudes = 4096
-
-PHASOR_CACHE = COS_CACHE + complex(0,1) * SIN_CACHE
-
-nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
-
-passband = float(CARRIER_CYCLES_PER_SECOND) / nyquist_freq
-
-tuner_numer, tuner_denom = scipy.signal.iirdesign( [ passband * 0.5 * 1.025, passband * 1.5 * 0.975 ],
-                                                   [ passband * 0.5 * 0.975, passband * 1.5 * 1.025 ],
-                                                   .1, 30 )
-
-filter_numer, filter_denom = scipy.signal.iirdesign( passband * 0.85, passband * 0.95, .1, 30 )
 
 def decimate( samples, factor ):
     return samples[::factor]
@@ -66,11 +41,9 @@ class TwoChannelReceiver:
         self.rightrec = Receiver()
 
     def receive( self, num_samples, stream, samples_per_chunk ):
-        factor = int( 1.0 / passband )
-
-        leftsamp, rightsamp = raw_receive( num_samples * factor, stream, samples_per_chunk )
-        leftsamp = self.leftrec.demodulate( leftsamp )[::factor]
-        rightsamp = self.rightrec.demodulate( rightsamp )[::factor]
+        leftsamp, rightsamp = raw_receive( num_samples, stream, samples_per_chunk )
+        leftsamp = self.leftrec.demodulate( leftsamp )
+        rightsamp = self.rightrec.demodulate( rightsamp )
         return (leftsamp, rightsamp)
 
     def amplification( self ):
@@ -78,8 +51,7 @@ class TwoChannelReceiver:
 
 class Receiver:
     def receive( self, num_samples, stream, samples_per_chunk ):
-        factor = int( 1.0 / passband )
-        return self.demodulate( raw_receive( num_samples * factor, stream, samples_per_chunk ) )[::factor]
+        return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
     def __init__( self ):
         self.total_sample_count = 0
@@ -87,8 +59,8 @@ class Receiver:
         self.amplitude_sum = 0
         self.samples_in_amplitude_history = 0
 
-        self.tuner_state = scipy.signal.lfiltic( tuner_numer, tuner_denom, [] )
-        self.filter_state = scipy.signal.lfiltic( filter_numer, filter_denom, [] )
+        self.tuner = Filter( 2000, 3000 )
+        self.lowpass = Filter( 0, 500 )
 
     def clear_amplitude_history( self ):
         self.amplitudes = []
@@ -99,13 +71,16 @@ class Receiver:
         return 1/ abs(self.amplitude_sum / self.samples_in_amplitude_history)
 
     def demodulate( self, samples, include_this_carrier=True ):
-        # Tune in band around carrier frequency
-        samples, self.tuner_state = scipy.signal.lfilter( tuner_numer, tuner_denom, samples, zi=self.tuner_state )
-
         sample_count = len( samples )
 
+        # Tune in band around carrier frequency
+        samples = self.tuner( samples )
+
         # Shift the modulated waveform back down to baseband
-        demodulated_samples = samples * numpy.roll( PHASOR_CACHE, self.total_sample_count )[0:sample_count]
+        SAMPLES = numpy.arange( self.total_sample_count, self.total_sample_count + sample_count )
+        ARGS = SAMPLES * (CARRIER_CYCLES_PER_SECOND * 2.0 * math.pi / SAMPLES_PER_SECOND)
+        LOCAL_CARRIER = numpy.cos(ARGS) + complex(0,1) * numpy.sin(ARGS)
+        demodulated_samples = samples * LOCAL_CARRIER
         self.total_sample_count += sample_count
 
         # calculate average amplitude (DC amplitude)
@@ -130,14 +105,14 @@ class Receiver:
             amplitude_overall_average = 1
 
         # Shift samples in time back to original phase and amplitude (using carrier)
-        constant = 2*(DC/AMPLITUDE)/amplitude_overall_average
-        constant2 = 2*DC/AMPLITUDE
+        constant = (DC/AMPLITUDE)/amplitude_overall_average
+        constant2 = DC/AMPLITUDE
         shifted_samples = demodulated_samples * constant - constant2
 
         shifted_samples = [x.real for x in shifted_samples]
 
         # Low-pass filter
-        filtered_samples, self.filter_state = scipy.signal.lfilter( filter_numer, filter_denom, shifted_samples, zi=self.filter_state )
+        filtered_samples = self.lowpass( shifted_samples )
         
         return filtered_samples
     
