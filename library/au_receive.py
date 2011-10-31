@@ -8,24 +8,9 @@ import scipy.signal
 
 from au_defs import *
 
-TIME = 0 # seconds
-
 assert( abs( (float(SAMPLES_PER_SECOND) / float(CARRIER_CYCLES_PER_SECOND)) - (SAMPLES_PER_SECOND // CARRIER_CYCLES_PER_SECOND) ) < 0.01 )
 
-cachelen = 65536
-COS_CACHE = [0] * cachelen
-SIN_CACHE = [0] * cachelen
-for i in range( cachelen ):
-    COS_CACHE[ i ] = math.cos( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi )
-    SIN_CACHE[ i ] = math.sin( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi )
-    TIME += 1.0 / SAMPLES_PER_SECOND
-
-COS_CACHE = numpy.array(COS_CACHE)
-SIN_CACHE = numpy.array(SIN_CACHE)
-
 num_amplitudes = 4096
-
-PHASOR_CACHE = COS_CACHE + complex(0,1) * SIN_CACHE
 
 nyquist_freq = float(SAMPLES_PER_SECOND) / 2.0
 
@@ -105,7 +90,10 @@ class Receiver:
         sample_count = len( samples )
 
         # Shift the modulated waveform back down to baseband
-        demodulated_samples = samples * numpy.roll( PHASOR_CACHE, self.total_sample_count )[0:sample_count]
+        SAMPLES = numpy.arange( self.total_sample_count, self.total_sample_count + sample_count )
+        ARGS = SAMPLES * (CARRIER_CYCLES_PER_SECOND * 2.0 * math.pi / SAMPLES_PER_SECOND)
+        LOCAL_CARRIER = numpy.cos(ARGS) + complex(0,1) * numpy.sin(ARGS)
+        demodulated_samples = samples * LOCAL_CARRIER
         self.total_sample_count += sample_count
 
         # calculate average amplitude (DC amplitude)
