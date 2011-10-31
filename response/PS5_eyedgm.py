@@ -4,10 +4,10 @@ import sys
 import au_sendreceive
 import numpy
 import matplotlib
-#matplotlib.use('macosx')
+matplotlib.use('macosx')
 import matplotlib.pyplot as p
 import PS5_tests
-import PS5_usr
+import PS5_usr_soln
 
 # generate all possible b-bit bit sequences and merge into a single array
 def all_bit_patterns(b):
@@ -28,16 +28,18 @@ def rand_bit_patterns(b,m):
 
 def plot_eye_diagram(channel,plot_label,hlen,samples_per_bit):
     """
-    For the given channel, you should generate a bit sequence made of all
-    possible B bit messages (you can use the all_bit_patterns function
-    above), where B is picked using the formula B = floor(hlen/N) + 2.
-    Then plot the received samples by overlaying sets of
-    2*samples_per_bit + 1 samples.
+    For the given channel, you should generate a bit sequence made of
+    all possible B bit messages (you can use the all_bit_patterns
+    function above), where B is picked using the formula B =
+    floor(hlen/N) + 2.  Or, if B is too large (> 6, say), call
+    rand_bit_patterns(B, 64).  Then plot the received samples by
+    overlaying sets of 2*samples_per_bit + 1 samples.
     """
+    # your code here
 
     B = hlen/samples_per_bit + 2
     # Number of samples in a plot interval
-    interval = 2*samples_per_bit
+    interval = 2*samples_per_bit+1
 
     # build message
     if B < 7:
@@ -63,18 +65,20 @@ def plot_eye_diagram(channel,plot_label,hlen,samples_per_bit):
     p.title('Eye diagram for channel %s' % plot_label)
 
 def run_channel_eye(channel, id, samples_per_bit):
-    l, unit_step_resp = PS5_usr.unit_step_response(channel, wsize=20, tol=0.01)
+    l, unit_step_resp = PS5_usr_soln.unit_step_response(channel, wsize=20, tol=0.01)
     print 'Length of unit step response:', l
     plot_eye_diagram(channel,id,hlen=l,samples_per_bit=samples_per_bit)
 
 if __name__ == '__main__':
     # Create the channels (noise free)
-#    channel0 = PS5_tests.channel(channelid='0')
-#    channel1 = PS5_tests.channel(channelid='1')
-#    channel2 = PS5_tests.channel(channelid='2')
+    """
     for i in range(0,3):
         print 'Software channel', i
-#        run_channel_eye(PS5_tests.channel(channelid=str(i)), str(i), 6)
+        if i != 1:
+            run_channel_eye(PS5_tests.channel(channelid=str(i)), str(i), 6)
+        else:
+            run_channel_eye(PS5_tests.channel(channelid=str(i)), str(i), 20)
+"""
     # run acoustic channel and plot its eye diagram
     run_channel_eye(au_sendreceive.channel(), 'acoustic', samples_per_bit=10)
 
