@@ -67,7 +67,7 @@ class Receiver:
         self.amplitude_sum = 0
         self.samples_in_amplitude_history = 0
 
-        self.tuner = Filter( 1000, 3000 )
+        self.tuner = Filter( 500, 3500 )
         self.lowpass = Filter( 0, 2000 )
 
     def clear_amplitude_history( self ):
@@ -113,8 +113,8 @@ class Receiver:
             amplitude_overall_average = 1
 
         # Shift samples in time back to original phase and amplitude (using carrier)
-        constant = 2*(DC/AMPLITUDE)/amplitude_overall_average
-        constant2 = 2*DC/AMPLITUDE
+        constant = (DC/AMPLITUDE)/amplitude_overall_average
+        constant2 = DC/AMPLITUDE
         shifted_samples = demodulated_samples * constant - constant2
 
         shifted_samples = [x.real for x in shifted_samples]
