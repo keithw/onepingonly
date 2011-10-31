@@ -7,10 +7,6 @@ from au_defs import *
 
 SAMPLES_PER_CHUNK = 128
 
-PREAMBLE_BITS = 32
-PREAMBLE_BIT_LEN = 256
-SECOND_CARRIER_LEN = 4096
-
 class channel:
     def __call__( self, samples ):
         # open soundcard
@@ -23,11 +19,9 @@ class channel:
 
         # prepare premable
         packet = [-1] * 16384 + [0] * 16384
-        one = [1] * PREAMBLE_BIT_LEN
-        zero = [-1] * PREAMBLE_BIT_LEN
         for i in range( PREAMBLE_BITS / 2 ):
-            packet.extend( zero )
-            packet.extend( one )
+            packet.extend( self.zero )
+            packet.extend( self.one )
         packet.extend( [0] * SECOND_CARRIER_LEN )
 
         packet.extend( samples )
@@ -40,6 +34,8 @@ class channel:
 
         samples_in = []
 
+        print "chunks: ", len(samples_out)
+
         # send output and collect input
         for chunk in samples_out:
             raw_send( [chunk], self.soundcard_inout )
@@ -47,11 +43,39 @@ class channel:
                                                        self.soundcard_inout, SAMPLES_PER_CHUNK ) )
 
         # demodulate input
-        raw_received = []
-        samples_all = []
-        for chunk in samples_in:
-            raw_received.extend( self.receiver.demodulate( chunk ) )
-            samples_all.extend( chunk )
+        print "about to run concat"
+        samples_all = numpy.concatenate( samples_in )
+        print "about to run detect_preamble"
+        ( preamble_end, offset_within_payload ) = self.detect_preamble( samples_all )
+
+        # don't use payload as part of reference carrier
+        # this allows us to correctly decode payload that doesn't sum to zero
+        version2 = self.receiver.demodulate( samples_all[ preamble_end : ],
+                                             include_this_carrier=False )
+
+        if len(version2) - offset_within_payload < len(samples):
+            print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
+            return []
+        assert( len(version2) - offset_within_payload >= len(samples) )
+
+        self.soundcard_inout.close()
+
+        return version2[offset_within_payload:offset_within_payload+len(samples)]
+
+    def __init__( self ):
+        self.id = "Audio"
+
+        self.p = pyaudio.PyAudio()
+
+        self.receiver = au_receive.Receiver()
+
+        self.one = [1] * PREAMBLE_BIT_LEN
+        self.zero = [-1] * PREAMBLE_BIT_LEN
+
+    def detect_preamble( self, received_signal ):
+        print "in detect preamble"
+        raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.split( received_signal, 256 )] )
+        print "initial demodulation"
 
         # find silent part of preamble
         silent_count = 0
@@ -134,15 +158,15 @@ class channel:
         self.receiver.clear_amplitude_history()
 
         # use preamble as the reference carrier for future demodulation
-        preamble_decoded = self.receiver.demodulate( samples_all[ preamble_start : preamble_end ] )
+        preamble_decoded = self.receiver.demodulate( received_signal[ preamble_start : preamble_end ] )
 
         # find REAL phase of preamble
         expected_preamble = []
         for i in range( PREAMBLE_BITS / 2 ):
-            expected_preamble.extend( zero )
-            expected_preamble.extend( one )
+            expected_preamble.extend( self.zero )
+            expected_preamble.extend( self.one )
 
-        out_of_phase_preamble = one[:PREAMBLE_BIT_LEN/2]
+        out_of_phase_preamble = self.one[:PREAMBLE_BIT_LEN/2]
         out_of_phase_preamble.extend( expected_preamble )
         out_of_phase_preamble = out_of_phase_preamble[0:len(expected_preamble)]
 
@@ -168,26 +192,6 @@ class channel:
 
         assert( payload_start > preamble_end )
 
-        # don't use payload as part of reference carrier
-        # this allows us to correctly decode payload that doesn't sum to zero
-        version2 = self.receiver.demodulate( samples_all[ preamble_end : ],
-                                             include_this_carrier=False )
         offset_within_payload = payload_start - preamble_end
 
-        print "Payload found at offset: %d samples" % payload_start
-
-        if len(version2) - offset_within_payload < len(samples):
-            print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
-            return []
-        assert( len(version2) - offset_within_payload >= len(samples) )
-
-        self.soundcard_inout.close()
-
-        return version2[offset_within_payload:offset_within_payload+len(samples)]
-
-    def __init__( self ):
-        self.id = "Audio"
-
-        self.p = pyaudio.PyAudio()
-
-        self.receiver = au_receive.Receiver()
+        return ( preamble_end, offset_within_payload )
