@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+from au_sendreceive import channel
+import au_send
+import sys
+
+# Make four channels, each with 500 Hz in each sideband (500 Hz at baseband)
+channels = [ channel( 500, 500 ),   #    0 <-> 1000
+             channel( 1500, 500 ),  # 1000 <-> 2000
+             channel( 2500, 500 ),  # 2000 <-> 3000
+             channel( 3500, 500	) ] # 3000 <-> 4000
+
+print "making signals"
+
+# Make four different signals
+signals = [ [0] * 500 + [-1] * 500 + [1] * 500,
+            [0] * 500 + [1] * 500 + [-1] * 500,
+            [1] * 500 + [-1] * 500 + [0] * 500,
+            [-1] * 500 + [0] * 500 + [1] * 500 ]
+
+# Modulate the four different signals and sum them together
+signal = None
+for i in range( 4 ):
+    signal = au_send.modulate_frame( channels[ i ].prepend_preamble( signals[ i ] ),
+                                     channels[ i ].carrier_freq,
+                                     existing=signal )
+
+# Make wave file
+au_send.write_wav( sys.argv[1], signal )

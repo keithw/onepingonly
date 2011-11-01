@@ -43,7 +43,7 @@ class Searcher:
         return self.i - match_length
 
 class channel:
-    def send_voltage_samples( self, samples ):
+    def prepend_preamble( self, samples ):
         # prepare premable
         signal = [-1] * 16384 + [0] * 16384
         for i in range( PREAMBLE_BITS / 2 ):
@@ -56,10 +56,7 @@ class channel:
         signal.extend( [0] * 256 )
         signal.extend( [-1] * 32768 )
 
-        # prepare modulated output
-        samples_out = modulate_float( signal, self.carrier_freq, SAMPLES_PER_CHUNK )
-
-        return samples_out
+        return signal
 
     def extract_payload( self, signal, payload_len ):
         # find preamble in received signal
@@ -85,7 +82,7 @@ class channel:
                                            output = True,
                                            frames_per_buffer = SAMPLES_PER_CHUNK)
 
-        samples_out = self.send_voltage_samples( samples )
+        samples_out = modulate_float( self.prepend_preamble( samples ), self.carrier_freq, SAMPLES_PER_CHUNK )
         samples_in = []
 
         # send output and collect input

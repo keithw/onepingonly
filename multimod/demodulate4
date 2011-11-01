@@ -1,0 +1,45 @@
+#!/usr/bin/python
+
+from au_defs import *
+from au_sendreceive import channel
+import au_receive
+import pyaudio
+import matplotlib.pyplot as p
+import PS5_tests
+
+SECONDS_TO_LISTEN = 15
+PAYLOAD_LEN = 1500 # samples
+
+# Receive ten seconds of broadband (0-4kHz) audio
+paud = pyaudio.PyAudio()
+
+SAMPLES_PER_CHUNK = 128
+soundcard = paud.open(format=FORMAT,
+                      channels = CHANNELS,
+                      rate = SAMPLES_PER_SECOND,
+                      input = True,
+                      output = False,
+                      frames_per_buffer = SAMPLES_PER_CHUNK)
+
+print "Starting to listen... PLEASE HIT PLAY"
+
+samples_in = au_receive.raw_receive( SECONDS_TO_LISTEN * SAMPLES_PER_SECOND,
+                                     soundcard, SAMPLES_PER_CHUNK )
+
+print "Done listening."
+
+soundcard.close()
+
+# Make four channels, each with 500 Hz in each sideband (500 Hz at baseband)
+channels = [ channel( 500, 500 ),   #    0 <-> 1000
+             channel( 1500, 500 ),  # 1000 <-> 2000
+             channel( 2500, 500 ),  # 2000 <-> 3000
+             channel( 3500, 500	) ] # 3000 <-> 4000
+
+p.ion()
+
+for i in range( 4 ):
+    print "Receiving signal at %d Hz..." % channels[ i ].carrier_freq
+    PS5_tests.plot_USR( channels[ i ].extract_payload( samples_in, PAYLOAD_LEN ), "%d Hz" % channels[ i ].carrier_freq )
+
+p.show()

@@ -25,7 +25,7 @@ def raw_receive( num_samples, stream, samples_per_chunk ):
             sys.stderr.write( "IOError\n" )
             pass
 
-    assert( sample_count == num_samples )
+    assert( sample_count >= num_samples )
     samples = numpy.array(samples)
 
     if CHANNELS == 2:
