@@ -63,17 +63,16 @@ class channel:
 
     def extract_payload( self, signal, payload_len ):
         # find preamble in received signal
-        ( preamble_end, offset_within_payload ) = self.detect_preamble( signal )
+        ( preamble_start, payload_start ) = self.detect_preamble( signal )
 
         # demodulate payload using carrier reference from preamble
-        version2 = self.receiver.demodulate( signal[ preamble_end : ],
+        version2 = self.receiver.demodulate( signal[ preamble_start: ],
                                              carrier=self.receiver.reference_carrier )
 
-        if len(version2) - offset_within_payload < payload_len:
-            print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
-            raise Exception( "Short read" )
+        extracted_payload = version2[payload_start-preamble_start:payload_start-preamble_start+payload_len]
+        assert( len(extracted_payload) == payload_len )
 
-        return version2[offset_within_payload:offset_within_payload+payload_len]
+        return extracted_payload
 
     def __call__( self, samples ):
         # open soundcard
@@ -116,6 +115,7 @@ class channel:
         if len( received_signal ) % demodulation_chunk != 0:
             received.signal = numpy.concatenate( received_signal, numpy.zeros( len(received_signal) % demodulation_chunk ) )
 
+        # first, rough demodulation
         raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.split( received_signal, len(received_signal) / demodulation_chunk )] )
 
         searcher = Searcher( raw_received )
@@ -163,9 +163,8 @@ class channel:
         preamble_len = preamble_end - preamble_start
 
         # now that we've identified the payload, use one AGC setting for whole thing
-#        self.receiver.clear_amplitude_history()
 
-        # use preamble as the reference carrier for future demodulation
+        # second, better demodulation
         preamble_decoded = self.receiver.demodulate( received_signal[ preamble_start : preamble_end ] )
 
         # find REAL phase of preamble
@@ -202,4 +201,4 @@ class channel:
 
         offset_within_payload = payload_start - preamble_end
 
-        return ( preamble_end, offset_within_payload )
+        return ( preamble_start, payload_start )

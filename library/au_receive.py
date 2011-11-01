@@ -52,7 +52,6 @@ class Receiver:
         return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
     def __init__( self, center_frequency, bandwidth ):
-        self.total_sample_count = 0
         self.reference_carrier = 1
 
         self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
@@ -65,11 +64,10 @@ class Receiver:
         samples = self.tuner( samples )
 
         # Shift the modulated waveform back down to baseband
-        SAMPLES = numpy.arange( self.total_sample_count, self.total_sample_count + sample_count )
+        SAMPLES = numpy.arange( 0, sample_count )
         ARGS = SAMPLES * (CARRIER_CYCLES_PER_SECOND * 2.0 * math.pi / SAMPLES_PER_SECOND)
         LOCAL_CARRIER = numpy.cos(ARGS) + complex(0,1) * numpy.sin(ARGS)
         demodulated_samples = samples * LOCAL_CARRIER
-        self.total_sample_count += sample_count
 
         # calculate average amplitude (DC amplitude)
         # we will use this for auto gain control
