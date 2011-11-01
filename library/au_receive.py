@@ -58,7 +58,7 @@ class Receiver:
         self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
         self.lowpass = Filter( 0, bandwidth )
 
-    def demodulate( self, samples, include_this_carrier=True ):
+    def demodulate( self, samples, carrier=0 ):
         sample_count = len( samples )
 
         # Tune in band around carrier frequency
@@ -73,15 +73,13 @@ class Receiver:
 
         # calculate average amplitude (DC amplitude)
         # we will use this for auto gain control
-        if include_this_carrier:
-            amplitude_overall_average = sum( demodulated_samples ) / sample_count
-        else:
-            amplitude_overall_average = self.reference_carrier
+        if carrier==0:
+            carrier = sum( demodulated_samples ) / sample_count
 
-        self.reference_carrier = sum( demodulated_samples ) / sample_count
+        self.reference_carrier = carrier
 
         # Shift samples in time back to original phase and amplitude (using carrier)
-        constant = (DC/AMPLITUDE)/amplitude_overall_average
+        constant = (DC/AMPLITUDE)/carrier
         constant2 = DC/AMPLITUDE
         shifted_samples = demodulated_samples * constant - constant2
 

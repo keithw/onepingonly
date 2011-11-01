@@ -67,7 +67,7 @@ class channel:
 
         # demodulate payload using carrier reference from preamble
         version2 = self.receiver.demodulate( signal[ preamble_end : ],
-                                             include_this_carrier=False )
+                                             carrier=self.receiver.reference_carrier )
 
         if len(version2) - offset_within_payload < payload_len:
             print "warning: short packet( got %d, needed %d ). May need to lengthen trailer!" % ( len(version2) - offset_within_payload, len(samples) )
