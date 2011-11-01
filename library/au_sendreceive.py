@@ -43,7 +43,7 @@ class Searcher:
         return self.i - match_length
 
 class channel:
-    def prepend_preamble( self, samples ):
+    def send_voltage_samples( self, samples ):
         # prepare premable
         signal = [-1] * 16384 + [0] * 16384
         for i in range( PREAMBLE_BITS / 2 ):
@@ -57,7 +57,7 @@ class channel:
         signal.extend( [-1] * 32768 )
 
         # prepare modulated output
-        samples_out = modulate_float( signal, SAMPLES_PER_CHUNK )
+        samples_out = modulate_float( signal, self.carrier_freq, SAMPLES_PER_CHUNK )
 
         return samples_out
 
@@ -85,7 +85,7 @@ class channel:
                                            output = True,
                                            frames_per_buffer = SAMPLES_PER_CHUNK)
 
-        samples_out = self.prepend_preamble( samples )
+        samples_out = self.send_voltage_samples( samples )
         samples_in = []
 
         # send output and collect input
@@ -101,20 +101,20 @@ class channel:
 
         return self.extract_payload( samples_all, len( samples ) )
 
-    def __init__( self, carrier, bandwidth ):
+    def __init__( self, carrier_freq, bandwidth ):
         self.id = "Audio"
 
         self.p = pyaudio.PyAudio()
 
-        self.carrier = carrier
+        self.carrier_freq = carrier_freq
         self.bandwidth = bandwidth
 
-        self.receiver = au_receive.Receiver( carrier, bandwidth )
+        self.receiver = au_receive.Receiver( carrier_freq, bandwidth )
 
         self.one = [1] * PREAMBLE_BIT_LEN
         self.zero = [-1] * PREAMBLE_BIT_LEN
 
-        self.f1 = Filter( self.carrier - self.bandwidth, self.carrier + self.bandwidth )
+        self.f1 = Filter( self.carrier_freq - self.bandwidth, self.carrier_freq + self.bandwidth )
         self.f2 = Filter( 0, self.bandwidth )
 
     def detect_preamble( self, received_signal ):
@@ -215,6 +215,6 @@ class channel:
         return ( preamble_start, payload_start )
 
     def dmd( self, samples ):
-        args = numpy.arange(0,len(samples)) * CARRIER_CYCLES_PER_SECOND * 2 * math.pi / SAMPLES_PER_SECOND
+        args = numpy.arange(0,len(samples)) * self.carrier_freq * 2 * math.pi / SAMPLES_PER_SECOND
         ds = self.f1( samples ) * (numpy.cos(args) + complex(0,1) * numpy.sin(args))
         return self.f2( [x.real for x in (len(samples)*ds/sum(ds) - 1) * DC/AMPLITUDE] )

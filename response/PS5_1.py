@@ -26,13 +26,13 @@ def unit_step_response(channel,max_length=100):
 
     """
 #    step = [0]*(max_length*3/2) + [-1]*(max_length/2) + [1]*(max_length) + [-1]*(max_length/2) + [1]*(max_length/2) 
-    step = [0] * 100 + [1] * 100 + [-.5] * 50
+    step = [0] * 100 + [1] * 100 + [-1] * 100 + [0.5] * 100 + [-0.5] * 100
     step_response = channel(step)
 #    return step_response[max_length/2 - 128: max_length/2 + 128]
     return step_response
 
 if __name__ == '__main__':
-    channel = au_sendreceive.channel( 2500, 500 )
+    channel = au_sendreceive.channel( 1500, 500 )
 
     # plot the unit-sample response of our three virtual channels
 #    PS5_tests.plot_USR(unit_step_response(channel0),'0')

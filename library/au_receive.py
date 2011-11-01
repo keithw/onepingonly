@@ -52,6 +52,8 @@ class Receiver:
         return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
     def __init__( self, center_frequency, bandwidth ):
+        self.carrier_freq = center_frequency
+
         self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
         self.lowpass = Filter( 0, bandwidth )
 
@@ -65,7 +67,7 @@ class Receiver:
         # By multiplying by a complex exponential
 
         # First, we make the complex exponential (the local carrier)
-        args = numpy.arange(0,len(samples)) * CARRIER_CYCLES_PER_SECOND * 2 * math.pi / SAMPLES_PER_SECOND
+        args = numpy.arange(0,len(samples)) * self.carrier_freq * 2 * math.pi / SAMPLES_PER_SECOND
         local_carrier = numpy.cos(args) + complex(0,1) * numpy.sin(args)
 
         # Now, we shift down to baseband (and also up to 2x LOCAL_CARRIER)
@@ -86,4 +88,3 @@ class Receiver:
         filtered_samples = self.lowpass( shifted_samples )
         
         return filtered_samples
-

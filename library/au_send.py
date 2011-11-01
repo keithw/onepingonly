@@ -12,14 +12,6 @@ import array
 from au_filter import Filter
 from au_defs import *
 
-TIME = 0 # seconds
-
-cachelen = SAMPLES_PER_SECOND
-COS_CACHE = [0] * cachelen
-for i in range( cachelen ):
-    COS_CACHE[ i ] = math.cos( CARRIER_CYCLES_PER_SECOND * TIME * 2 * math.pi )
-    TIME += 1.0 / SAMPLES_PER_SECOND
-
 total_sample_count = 0
 
 lowpass = Filter( 0, 500 )
@@ -44,8 +36,7 @@ def raw_send( chunks, stream ):
         stream.write( chunk )
 
 # Send one chunk of I samples, modulated onto the carrier frequency
-def modulate_float( samples, samples_per_chunk ):
-    global TIME
+def modulate_float( samples, carrier_freq, samples_per_chunk ):
     global total_sample_count
     global lowpass
 
@@ -58,7 +49,7 @@ def modulate_float( samples, samples_per_chunk ):
     samples = lowpass( samples )
     
     for s in samples:
-        chunk_data[ chunk_number ] += struct.pack( 'f', ((s * AMPLITUDE) + DC) * COS_CACHE[ total_sample_count % cachelen ] )
+        chunk_data[ chunk_number ] += struct.pack( 'f', ((s * AMPLITUDE) + DC) * math.cos( total_sample_count * 2 * math.pi * carrier_freq / SAMPLES_PER_SECOND ) )
         total_sample_count += 1
         sample_count += 1
 
