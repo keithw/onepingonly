@@ -55,17 +55,10 @@ class Receiver:
 
     def __init__( self ):
         self.total_sample_count = 0
-        self.amplitudes = []
-        self.amplitude_sum = 0
-        self.samples_in_amplitude_history = 0
+        self.reference_carrier = 1
 
         self.tuner = Filter( 2000, 3000 )
         self.lowpass = Filter( 0, 500 )
-
-    def clear_amplitude_history( self ):
-        self.amplitudes = []
-        self.amplitude_sum = 0
-        self.samples_in_amplitude_history = 0
 
     def amplification( self ):
         return 1/ abs(self.amplitude_sum / self.samples_in_amplitude_history)
@@ -86,23 +79,11 @@ class Receiver:
         # calculate average amplitude (DC amplitude)
         # we will use this for auto gain control
         if include_this_carrier:
-            total_amplitude = sum( demodulated_samples )
-            self.amplitudes.append( (total_amplitude, sample_count) )
-            self.amplitude_sum += total_amplitude 
-            self.samples_in_amplitude_history += sample_count
+            amplitude_overall_average = sum( demodulated_samples ) / sample_count
+        else:
+            amplitude_overall_average = self.reference_carrier
 
-            while self.samples_in_amplitude_history - self.amplitudes[ 0 ][ 1 ] >= num_amplitudes:
-                self.amplitude_sum -= self.amplitudes[ 0 ][ 0 ]
-                self.samples_in_amplitude_history -= self.amplitudes[ 0 ][ 1 ]
-                self.amplitudes.pop( 0 )
-
-        amplitude_overall_average = self.amplitude_sum / self.samples_in_amplitude_history
-
-        if not include_this_carrier:
-            self.clear_amplitude_history()
-
-        if amplitude_overall_average == 0:
-            amplitude_overall_average = 1
+        self.reference_carrier = sum( demodulated_samples ) / sample_count
 
         # Shift samples in time back to original phase and amplitude (using carrier)
         constant = (DC/AMPLITUDE)/amplitude_overall_average

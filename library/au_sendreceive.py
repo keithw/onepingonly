@@ -163,7 +163,7 @@ class channel:
         preamble_len = preamble_end - preamble_start
 
         # now that we've identified the payload, use one AGC setting for whole thing
-        self.receiver.clear_amplitude_history()
+#        self.receiver.clear_amplitude_history()
 
         # use preamble as the reference carrier for future demodulation
         preamble_decoded = self.receiver.demodulate( received_signal[ preamble_start : preamble_end ] )
