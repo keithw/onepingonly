@@ -190,7 +190,7 @@ class channel:
         out_of_phase_preamble.extend( expected_preamble )
         out_of_phase_preamble = out_of_phase_preamble[0:len(expected_preamble)]
 
-        if abs(len(preamble_decoded) - len(expected_preamble)) > PREAMBLE_BIT_LEN/2:
+        if abs(len(preamble_decoded) - len(expected_preamble)) > 2 * PREAMBLE_BIT_LEN:
             print "Warning: Preamble offset too great to be corrected -- too much noise?"
             print "preamble_start: %d, preamble_end: %d, expected_preamble: %d" % (preamble_start, preamble_end, len(expected_preamble))
             return []
