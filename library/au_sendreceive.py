@@ -38,7 +38,7 @@ class Searcher:
             self.i += 1
 
         if matching_count < match_length:
-            raise Exception( "Count not find %s" % description )
+            raise Exception( "Could not find %s" % description )
         
         return self.i - match_length
 
@@ -127,7 +127,7 @@ class channel:
         while preamble_bits_found < PREAMBLE_BITS:
             bit_polarity = (preamble_bits_found % 2) * 2 - 1
             preamble_thisbit = searcher.find( 0.2 * bit_polarity,
-                                              ("preamble bit %d" % bit_polarity), PREAMBLE_BIT_LEN / 4,
+                                              ("preamble bit %d" % preamble_bits_found), PREAMBLE_BIT_LEN / 4,
                                               greater_than=(bit_polarity==1),
                                               absolute_value=False )
 
