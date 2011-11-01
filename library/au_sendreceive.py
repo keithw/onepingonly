@@ -160,7 +160,7 @@ class channel:
 
         print 'Found preamble'
 
-        preamble_end = preamble_thisbit + 3*PREAMBLE_BIT_LEN/4
+        preamble_end = preamble_thisbit + PREAMBLE_BIT_LEN
 
         # search for silence
         searcher.find( 0.7, "second tone in preamble", SECOND_CARRIER_LEN/2 )
