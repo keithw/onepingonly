@@ -105,7 +105,7 @@ class channel:
 
         self.p = pyaudio.PyAudio()
 
-        self.receiver = au_receive.Receiver()
+        self.receiver = au_receive.Receiver( 2500, 500 )
 
         self.one = [1] * PREAMBLE_BIT_LEN
         self.zero = [-1] * PREAMBLE_BIT_LEN

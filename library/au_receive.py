@@ -10,8 +10,6 @@ from au_filter import Filter
 
 from au_defs import *
 
-num_amplitudes = 1
-
 def decimate( samples, factor ):
     return samples[::factor]
 
@@ -53,15 +51,12 @@ class Receiver:
     def receive( self, num_samples, stream, samples_per_chunk ):
         return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
-    def __init__( self ):
+    def __init__( self, center_frequency, bandwidth ):
         self.total_sample_count = 0
         self.reference_carrier = 1
 
-        self.tuner = Filter( 2000, 3000 )
-        self.lowpass = Filter( 0, 500 )
-
-    def amplification( self ):
-        return 1/ abs(self.amplitude_sum / self.samples_in_amplitude_history)
+        self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
+        self.lowpass = Filter( 0, bandwidth )
 
     def demodulate( self, samples, include_this_carrier=True ):
         sample_count = len( samples )
