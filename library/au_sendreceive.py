@@ -114,8 +114,10 @@ class channel:
     def detect_preamble( self, received_signal ):
         demodulation_chunk = PREAMBLE_BIT_LEN * 4
 
+        # make sure length is even multiple of demodulation chunk size
         if len( received_signal ) % demodulation_chunk != 0:
-            received.signal = numpy.concatenate( received_signal, numpy.zeros( len(received_signal) % demodulation_chunk ) )
+            received_signal = numpy.hstack( (received_signal, 
+                                             numpy.zeros( demodulation_chunk - (len(received_signal) % demodulation_chunk) ) ) )
 
         # first, rough demodulation
         raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.split( received_signal, len(received_signal) / demodulation_chunk )] )
