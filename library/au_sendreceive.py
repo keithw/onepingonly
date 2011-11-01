@@ -13,7 +13,8 @@ class Searcher:
         self.samples = samples
 
     def find( self, threshold, description, match_length, greater_than=False, absolute_value=True ):
-        matching_count = 0
+        survey_extent = 0
+        matching_score = 0
 
         def matcher( x ):
             def val4val( x ):
@@ -27,17 +28,21 @@ class Searcher:
             return test( val4val( x ), val4val( threshold ) )
 
         while self.i < len(self.samples):
+            survey_extent += 1
             if matcher( self.samples[ self.i ] ):
-                matching_count += 1
-            else:
-                matching_count = 0
+                matching_score += 1
 
-            if matching_count >= match_length:
-                break
+            if survey_extent >= match_length:
+                if matching_score >= match_length * 0.5:
+                    break
+                else:
+                    self.i -= match_length * 0.5
+                    survey_extent = 0
+                    matching_score = 0
 
             self.i += 1
 
-        if matching_count < match_length:
+        if matching_score < match_length * 0.5:
             raise Exception( "Could not find %s" % description )
         
         return self.i - match_length
