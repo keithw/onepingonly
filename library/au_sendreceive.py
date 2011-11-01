@@ -111,7 +111,12 @@ class channel:
         self.zero = [-1] * PREAMBLE_BIT_LEN
 
     def detect_preamble( self, received_signal ):
-        raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.array_split( received_signal, 256 )] )
+        demodulation_chunk = PREAMBLE_BIT_LEN * 4
+
+        if len( received_signal ) % demodulation_chunk != 0:
+            received.signal = numpy.concatenate( received_signal, numpy.zeros( len(received_signal) % demodulation_chunk ) )
+
+        raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.split( received_signal, len(received_signal) / demodulation_chunk )] )
 
         searcher = Searcher( raw_received )
 

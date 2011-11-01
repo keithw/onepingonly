@@ -10,7 +10,7 @@ from au_filter import Filter
 
 from au_defs import *
 
-num_amplitudes = 4096
+num_amplitudes = 1
 
 def decimate( samples, factor ):
     return samples[::factor]
