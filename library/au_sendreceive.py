@@ -66,11 +66,15 @@ class channel:
         ( preamble_start, payload_start ) = self.detect_preamble( signal )
 
         # demodulate payload using carrier reference from preamble
-        version2 = self.receiver.demodulate( signal[ preamble_start: ],
-                                             carrier=self.receiver.reference_carrier )
+        slice_start = payload_start - 3*SECOND_CARRIER_LEN/4
+        slice_end = payload_start + payload_len
+        extracted_payload = self.receiver.demodulate( signal[ slice_start : slice_end ],
+                                                      carrier=self.receiver.reference_carrier,
+                                                      offset=slice_start )[ payload_start - slice_start: ]
 
-        extracted_payload = version2[payload_start-preamble_start:payload_start-preamble_start+payload_len]
-        assert( len(extracted_payload) == payload_len )
+        if len( extracted_payload ) != payload_len:
+            raise Exception( "WARNING: Only received %d of %d samples sent" % ( len(extracted_payload),
+                                                                                payload_len ) )
 
         return extracted_payload
 
@@ -165,7 +169,11 @@ class channel:
         # now that we've identified the payload, use one AGC setting for whole thing
 
         # second, better demodulation
-        preamble_decoded = self.receiver.demodulate( received_signal[ preamble_start : preamble_end ] )
+        slice_start = preamble_start - 3*SECOND_CARRIER_LEN/4
+        slice_end = preamble_end + 3*SECOND_CARRIER_LEN/4
+        preamble_decoded = self.receiver.demodulate( received_signal[ slice_start : slice_end ],
+                                                     offset=slice_start )[ preamble_start - slice_start:
+                                                                               preamble_end - slice_start ]
 
         # find REAL phase of preamble
         expected_preamble = []

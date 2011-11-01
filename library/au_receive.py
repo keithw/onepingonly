@@ -57,22 +57,20 @@ class Receiver:
         self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
         self.lowpass = Filter( 0, bandwidth )
 
-    def demodulate( self, samples, carrier=0 ):
-        sample_count = len( samples )
-
+    def demodulate( self, samples, carrier=0, offset=0 ):
         # Tune in band around carrier frequency
         samples = self.tuner( samples )
 
         # Shift the modulated waveform back down to baseband
-        SAMPLES = numpy.arange( 0, sample_count )
+        SAMPLES = numpy.arange( offset, offset + len( samples ) )
         ARGS = SAMPLES * (CARRIER_CYCLES_PER_SECOND * 2.0 * math.pi / SAMPLES_PER_SECOND)
         LOCAL_CARRIER = numpy.cos(ARGS) + complex(0,1) * numpy.sin(ARGS)
         demodulated_samples = samples * LOCAL_CARRIER
 
         # calculate average amplitude (DC amplitude)
-        # we will use this for auto gain control
+        # we will use this for auto gain control if user has not supplied carrier phase
         if carrier==0:
-            carrier = sum( demodulated_samples ) / sample_count
+            carrier = sum( demodulated_samples ) / len( samples )
 
         self.reference_carrier = carrier
 
