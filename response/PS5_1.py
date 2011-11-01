@@ -32,7 +32,7 @@ def unit_step_response(channel,max_length=100):
     return step_response
 
 if __name__ == '__main__':
-    channel = au_sendreceive.channel()
+    channel = au_sendreceive.channel( 2500, 500 )
 
     # plot the unit-sample response of our three virtual channels
 #    PS5_tests.plot_USR(unit_step_response(channel0),'0')

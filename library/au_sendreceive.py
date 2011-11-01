@@ -57,7 +57,7 @@ class channel:
         signal.extend( [-1] * 32768 )
 
         # prepare modulated output
-        samples_out = modulate( signal, SAMPLES_PER_CHUNK )
+        samples_out = modulate_float( signal, SAMPLES_PER_CHUNK )
 
         return samples_out
 
@@ -65,7 +65,7 @@ class channel:
         # find preamble in received signal
         ( preamble_start, payload_start ) = self.detect_preamble( signal )
 
-        # demodulate payload using carrier reference from preamble
+        # demodulate payload
         slice_start = payload_start - 3*SECOND_CARRIER_LEN/4
         slice_end = payload_start + payload_len
         extracted_payload = self.receiver.demodulate( signal[ slice_start : slice_end ] )[ payload_start - slice_start: ]
@@ -101,15 +101,21 @@ class channel:
 
         return self.extract_payload( samples_all, len( samples ) )
 
-    def __init__( self ):
+    def __init__( self, carrier, bandwidth ):
         self.id = "Audio"
 
         self.p = pyaudio.PyAudio()
 
-        self.receiver = au_receive.Receiver( 2500, 500 )
+        self.carrier = carrier
+        self.bandwidth = bandwidth
+
+        self.receiver = au_receive.Receiver( carrier, bandwidth )
 
         self.one = [1] * PREAMBLE_BIT_LEN
         self.zero = [-1] * PREAMBLE_BIT_LEN
+
+        self.f1 = Filter( self.carrier - self.bandwidth, self.carrier + self.bandwidth )
+        self.f2 = Filter( 0, self.bandwidth )
 
     def detect_preamble( self, received_signal ):
         demodulation_chunk = PREAMBLE_BIT_LEN * 4
@@ -120,7 +126,7 @@ class channel:
                                              numpy.zeros( demodulation_chunk - (len(received_signal) % demodulation_chunk) ) ) )
 
         # first, rough demodulation
-        raw_received = numpy.concatenate( [self.receiver.demodulate(x) for x in numpy.split( received_signal, len(received_signal) / demodulation_chunk )] )
+        raw_received = numpy.concatenate( [self.dmd(x) for x in numpy.split( received_signal, len(received_signal) / demodulation_chunk )] )
 
         searcher = Searcher( raw_received )
 
@@ -166,12 +172,10 @@ class channel:
 
         preamble_len = preamble_end - preamble_start
 
-        # now that we've identified the payload, use one AGC setting for whole thing
-
-        # second, better demodulation
+        # now that we've identified the preamble, demodulate it again using a single local carrier
         slice_start = preamble_start - 3*SECOND_CARRIER_LEN/4
         slice_end = preamble_end + 3*SECOND_CARRIER_LEN/4
-        preamble_decoded = self.receiver.demodulate( received_signal[ slice_start : slice_end ] )[ preamble_start - slice_start:
+        preamble_decoded = self.dmd( received_signal[ slice_start : slice_end ] )[ preamble_start - slice_start:
                                                                                                        preamble_end - slice_start ]
 
         # find REAL phase of preamble
@@ -209,3 +213,8 @@ class channel:
         offset_within_payload = payload_start - preamble_end
 
         return ( preamble_start, payload_start )
+
+    def dmd( self, samples ):
+        args = numpy.arange(0,len(samples)) * CARRIER_CYCLES_PER_SECOND * 2 * math.pi / SAMPLES_PER_SECOND
+        ds = self.f1( samples ) * (numpy.cos(args) + complex(0,1) * numpy.sin(args))
+        return self.f2( [x.real for x in (len(samples)*ds/sum(ds) - 1) * DC/AMPLITUDE] )

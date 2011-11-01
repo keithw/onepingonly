@@ -4,6 +4,10 @@ import struct
 import math
 import StringIO
 import scipy.signal
+import wave
+import numpy
+import random
+import array
 
 from au_filter import Filter
 from au_defs import *
@@ -21,8 +25,8 @@ total_sample_count = 0
 lowpass = Filter( 0, 500 )
 
 def send( samples, stream, samples_per_chunk ):
-    return raw_send( modulate( samples, 
-                               samples_per_chunk ),
+    return raw_send( modulate_float( samples, 
+                                     samples_per_chunk ),
                      stream )
 
 def expand( samples, factor ):
@@ -40,7 +44,7 @@ def raw_send( chunks, stream ):
         stream.write( chunk )
 
 # Send one chunk of I samples, modulated onto the carrier frequency
-def modulate( samples, samples_per_chunk ):
+def modulate_float( samples, samples_per_chunk ):
     global TIME
     global total_sample_count
     global lowpass
@@ -64,3 +68,26 @@ def modulate( samples, samples_per_chunk ):
             sample_count = 0
 
     return chunk_data
+
+def modulate_frame( samples, existing=False ):
+    if existing:
+        if len(samples) > len(existing):
+            existing = numpy.hstack( (existing, numpy.zeros( len(samples) - len(existing) )) )
+    else:
+        existing = numpy.zeros( len(samples) )
+
+    sample_num = random.randint( 0, 1024 )
+
+    args = numpy.arange( sample_num, sample_num + len(samples) ) * CARRIER_CYCLES_PER_SECOND * 2 * math.pi / SAMPLES_PER_SECOND
+    existing += numpy.cos(args) * lowpass( samples )
+
+    return existing
+
+def write_wav( filename, samples ):
+    wave_file = wave.open( filename, "w" )
+
+    wave_file.setparams( (1, 2, 8000, 0, "NONE", "NONE") )
+
+    wave_file.writeframes( array.array( 'h', [ int(0.5 + 16383.0*x) for x in samples ] ).tostring() )
+
+    wave_file.close()

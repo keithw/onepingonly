@@ -56,7 +56,9 @@ class Receiver:
         self.lowpass = Filter( 0, bandwidth )
 
     def demodulate( self, samples ):
-        # Tune in band around carrier frequency
+        print "Running demodulate()"
+
+        # Tune in just a band around the carrier frequency
         samples = self.tuner( samples )
 
         # Shift the modulated waveform back down to baseband
@@ -84,4 +86,4 @@ class Receiver:
         filtered_samples = self.lowpass( shifted_samples )
         
         return filtered_samples
-    
+
