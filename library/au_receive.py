@@ -52,36 +52,35 @@ class Receiver:
         return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
     def __init__( self, center_frequency, bandwidth ):
-        self.reference_carrier = 1
-
         self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
         self.lowpass = Filter( 0, bandwidth )
 
-    def demodulate( self, samples, carrier=0, offset=0 ):
+    def demodulate( self, samples ):
         # Tune in band around carrier frequency
         samples = self.tuner( samples )
 
         # Shift the modulated waveform back down to baseband
-        SAMPLES = numpy.arange( offset, offset + len( samples ) )
-        ARGS = SAMPLES * (CARRIER_CYCLES_PER_SECOND * 2.0 * math.pi / SAMPLES_PER_SECOND)
-        LOCAL_CARRIER = numpy.cos(ARGS) + complex(0,1) * numpy.sin(ARGS)
-        demodulated_samples = samples * LOCAL_CARRIER
+        # By multiplying by a complex exponential
 
-        # calculate average amplitude (DC amplitude)
-        # we will use this for auto gain control if user has not supplied carrier phase
-        if carrier==0:
-            carrier = sum( demodulated_samples ) / len( samples )
+        # First, we make the complex exponential (the local carrier)
+        args = numpy.arange(0,len(samples)) * CARRIER_CYCLES_PER_SECOND * 2 * math.pi / SAMPLES_PER_SECOND
+        local_carrier = numpy.cos(args) + complex(0,1) * numpy.sin(args)
 
-        self.reference_carrier = carrier
+        # Now, we shift down to baseband (and also up to 2x LOCAL_CARRIER)
+        demodulated_samples = samples * local_carrier
 
-        # Shift samples in time back to original phase and amplitude (using carrier)
-        constant = (DC/AMPLITUDE)/carrier
-        constant2 = DC/AMPLITUDE
-        shifted_samples = demodulated_samples * constant - constant2
+        # We assume the transmitted data had equal zeros and ones, and therefore
+        # that the average value is the (complex) amplitude of the carrier
+        estimated_carrier = sum( demodulated_samples ) / len( samples )
 
+        # Rotate and shift samples in time back to original phase and amplitude,
+        # including subtracting off the DC offset
+        shifted_samples = (demodulated_samples/estimated_carrier - 1) * DC/AMPLITUDE
+
+        # Throw out the imaginary part
         shifted_samples = [x.real for x in shifted_samples]
 
-        # Low-pass filter
+        # Low-pass filter to remove 2x carrier component
         filtered_samples = self.lowpass( shifted_samples )
         
         return filtered_samples
