@@ -51,15 +51,17 @@ class Receiver:
     def receive( self, num_samples, stream, samples_per_chunk ):
         return self.demodulate( raw_receive( num_samples, stream, samples_per_chunk ) )
 
-    def __init__( self, center_frequency, bandwidth ):
+    def __init__( self, center_frequency, bandwidth, auto_gain_control_window=0 ):
         self.carrier_freq = center_frequency
 
         self.tuner = Filter( center_frequency - bandwidth, center_frequency + bandwidth )
         self.lowpass = Filter( 0, bandwidth )
 
-    def demodulate( self, samples ):
-        print "Running demodulate()"
+        self.auto_gain_control_window = auto_gain_control_window
+        self.auto_gain = 1
+        self.auto_gain_saved_samples = numpy.array([])
 
+    def demodulate( self, samples ):
         # Tune in just a band around the carrier frequency
         samples = self.tuner( samples )
 
@@ -75,7 +77,16 @@ class Receiver:
 
         # We assume the transmitted data had equal zeros and ones, and therefore
         # that the average value is the (complex) amplitude of the carrier
-        estimated_carrier = sum( demodulated_samples ) / len( samples )
+
+        # use a rolling AGC window if caller (like graphing_receiver) wants it
+        self.auto_gain_saved_samples = numpy.append( self.auto_gain_saved_samples, demodulated_samples )
+        # use at least this round of samples for auto gain control
+        operational_window = max( self.auto_gain_control_window, len( samples ) )
+        excess = len( self.auto_gain_saved_samples ) - operational_window
+        if excess > 0:
+            self.auto_gain_saved_samples = numpy.delete( self.auto_gain_saved_samples, slice( excess ) )
+
+        estimated_carrier = sum( self.auto_gain_saved_samples ) / len( self.auto_gain_saved_samples )
 
         # Rotate and shift samples in time back to original phase and amplitude,
         # including subtracting off the DC offset

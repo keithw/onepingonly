@@ -2,6 +2,13 @@
 
 from au_defs import *
 
+# these definitions are for the graphing receiver (outside the library)
+# so it tunes in a particular frequency band
+# they must match the same parameters in library/sender
+
+CARRIER_CYCLES_PER_SECOND = 1500
+BASEBAND_WIDTH = 500
+
 import au_receive
 import pygtk
 import gtk
@@ -12,7 +19,8 @@ import pyaudio
 WIDTH=512
 HEIGHT=512
 window_size = 4096
-slice_size = 256
+slice_size = 512
+AUTO_GAIN_CONTROL_WINDOW = 4096 # average amplitude over this number of samples
 
 # Open soundcard
 p = pyaudio.PyAudio()
@@ -42,7 +50,8 @@ cursor = colormap.alloc_color( "green" )
 
 sample_num = 0
 
-receiver = au_receive.Receiver()
+receiver = au_receive.Receiver( CARRIER_CYCLES_PER_SECOND, BASEBAND_WIDTH,
+                                AUTO_GAIN_CONTROL_WINDOW )
 
 while True:
     # Receive audio

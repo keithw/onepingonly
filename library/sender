@@ -2,6 +2,13 @@
 
 from au_defs import *
 
+# these definitions are for the sender (outside the library)
+# so it tunes in a particular frequency band
+# they must match the same parameters in library/graphing_receiver
+
+CARRIER_CYCLES_PER_SECOND = 1500
+# BASEBAND_WIDTH = 500 # this is hardcoded in au_send.py
+
 import au_send
 import pyaudio
 
@@ -16,7 +23,7 @@ soundcard_out = p.open(format = FORMAT,
 
 VOLTAGES = [ 1, 0.5, 0, -0.5, -1, 0, 0, 0 ]
 #VOLTAGES = [ -1, -1, -1, -1, 1, 1, 1, 1]
-VOLTAGE_LENGTH = 128
+VOLTAGE_LENGTH = 256
 
 samples = []
 
@@ -25,4 +32,4 @@ for voltage in VOLTAGES:
         samples.append( voltage )
 
 while True:
-    au_send.send( samples, soundcard_out, 4096 )
+    au_send.send( samples, soundcard_out, 4096, CARRIER_CYCLES_PER_SECOND )

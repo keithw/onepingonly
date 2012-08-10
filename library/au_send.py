@@ -14,10 +14,10 @@ from au_defs import *
 
 total_sample_count = 0
 
-lowpass = Filter( 0, 500 )
+lowpass = Filter( 0, 500 ) # hardcoded bandwidth
 
-def send( samples, stream, samples_per_chunk ):
-    return raw_send( modulate_float( samples, 
+def send( samples, stream, samples_per_chunk, carrier_freq ):
+    return raw_send( modulate_float( samples, carrier_freq,
                                      samples_per_chunk ),
                      stream )
 
